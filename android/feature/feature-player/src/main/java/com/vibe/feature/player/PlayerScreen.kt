@@ -1,6 +1,7 @@
 package com.vibe.feature.player
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
@@ -14,9 +15,12 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -30,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -273,15 +278,14 @@ fun FullPlayerScreen(
     onToggleLike: () -> Unit = {}
 ) {
     var lastKnownTrack by remember { mutableStateOf(playbackState.currentTrack) }
-    LaunchedEffect(playbackState.currentTrack) {
-        if (playbackState.currentTrack != null) {
-            lastKnownTrack = playbackState.currentTrack
-        }
-    }
     val track = playbackState.currentTrack ?: lastKnownTrack ?: return
     var sliderPosition by remember(playbackState.positionMs) {
         mutableFloatStateOf(playbackState.positionMs.toFloat())
     }
+
+    // Global state for title expansion - properly scoped at FullPlayerScreen level
+    var isTitleExpanded by remember { mutableStateOf(false) }
+    var showTrackName by remember { mutableStateOf(true) }
 
     BoxWithConstraints(
         modifier = modifier
@@ -302,38 +306,23 @@ fun FullPlayerScreen(
         val isLandscape = maxWidth > maxHeight
 
         if (isLandscape) {
-            // Landscape / Tablet Two-Column Layout
+            // Landscape / Tablet Two-Column Layout - No drag handle, auto collapse title
             Column(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Drag handle pill + Top Bar
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 2.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .width(36.dp)
-                                .height(4.dp)
-                                .background(
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                    shape = RoundedCornerShape(2.dp)
-                                )
-                        )
-                    }
-
                     PlayerTopBar(
-                        contextTitle = playbackState.contextTitle,
+                        contextTitle = playbackState.contextTitle ?: stringResource(com.vibe.core.ui.R.string.player_now_playing),
                         activeDevice = playbackState.activeDevice,
                         onClose = onClose,
                         onOpenDevices = onOpenDevices,
-                        onOpenQueue = onOpenQueue
+                        onOpenQueue = onOpenQueue,
+                        isScrollable = false
                     )
                 }
+
+                Spacer(modifier = Modifier.height(10.dp))
 
                 // Two columns: Left Artwork, Right Info & Controls
                 Row(
@@ -445,7 +434,7 @@ fun FullPlayerScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Drag handle pill
+                // Drag handle pill - indicates pull-down gesture to close player
                 Box(
                     modifier = Modifier
                         .padding(top = 2.dp, bottom = 4.dp)
@@ -457,13 +446,15 @@ fun FullPlayerScreen(
                         )
                 )
 
-                // 1. Top Bar
+                // 1. Top Bar - collapsible with pull-down gesture
                 PlayerTopBar(
-                    contextTitle = playbackState.contextTitle,
+                    contextTitle = if (showTrackName) playbackState.contextTitle else stringResource(com.vibe.core.ui.R.string.player_now_playing),
                     activeDevice = playbackState.activeDevice,
                     onClose = onClose,
                     onOpenDevices = onOpenDevices,
-                    onOpenQueue = onOpenQueue
+                    onOpenQueue = onOpenQueue,
+                    isScrollable = true,
+                    onScrollDown = { showTrackName = false }
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -580,7 +571,9 @@ private fun PlayerTopBar(
     onClose: () -> Unit,
     onOpenDevices: () -> Unit,
     onOpenQueue: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isScrollable: Boolean = false,
+    onScrollDown: () -> Unit = {}
 ) {
     val isConnectActive = activeDevice != null
     Row(
@@ -603,12 +596,44 @@ private fun PlayerTopBar(
             }
         }
 
-        Text(
-            text = contextTitle ?: stringResource(com.vibe.core.ui.R.string.player_now_playing),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        if (isScrollable) {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                AnimatedContent(
+                    targetState = contextTitle ?: stringResource(com.vibe.core.ui.R.string.player_now_playing),
+                    transitionSpec = {
+                        (slideInVertically(
+                            initialOffsetY = { it / 2 },
+                            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+                        ) + fadeIn(animationSpec = tween(300))).togetherWith(
+                            slideOutVertically(
+                                targetOffsetY = { -it / 2 },
+                                animationSpec = tween(200)
+                            ) + fadeOut(animationSpec = tween(200))
+                        )
+                    },
+                    label = "ScrollingTitle"
+                ) { title ->
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.clickable { onScrollDown() }
+                    )
+                }
+            }
+        } else {
+            Text(
+                text = contextTitle ?: stringResource(com.vibe.core.ui.R.string.player_now_playing),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Surface(
