@@ -9,6 +9,7 @@ import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -32,6 +33,10 @@ fun SwipeDismissContainer(
     val coroutineScope = rememberCoroutineScope()
     val offsetY = remember { Animatable(0f) }
 
+    LaunchedEffect(Unit) {
+        offsetY.snapTo(0f)
+    }
+
     val draggableState = rememberDraggableState { delta ->
         if (enabled) {
             coroutineScope.launch {
@@ -45,21 +50,20 @@ fun SwipeDismissContainer(
         modifier = modifier
             .offset { IntOffset(0, offsetY.value.roundToInt()) }
             .graphicsLayer {
-                alpha = (1f - (offsetY.value / 1600f)).coerceIn(0.4f, 1f)
+                alpha = (1f - (offsetY.value / 1000f)).coerceIn(0f, 1f)
             }
             .draggable(
                 state = draggableState,
                 orientation = Orientation.Vertical,
                 enabled = enabled,
                 onDragStopped = { velocity ->
-                    if (offsetY.value > 220f || velocity > 800f) {
+                    if (offsetY.value > 200f || velocity > 600f) {
                         coroutineScope.launch {
                             offsetY.animateTo(
                                 targetValue = 1600f,
                                 animationSpec = spring(stiffness = Spring.StiffnessMedium)
                             )
                             onDismiss()
-                            offsetY.snapTo(0f)
                         }
                     } else {
                         coroutineScope.launch {
