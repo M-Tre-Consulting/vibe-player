@@ -53,12 +53,11 @@ fun SwipeDismissContainer(
         modifier = modifier
             .offset { IntOffset(0, offsetY.value.roundToInt()) }
             .graphicsLayer {
-                val progress = (offsetY.value / 400f).coerceIn(0f, 1f)
+                val progress = (offsetY.value / 350f).coerceIn(0f, 1f)
                 alpha = (1f - progress * 0.85f).coerceIn(0f, 1f)
-                val scaleXVal = (1f - progress * 0.70f).coerceIn(0.22f, 1f)
-                val scaleYVal = (1f - progress * 0.75f).coerceIn(0.22f, 1f)
-                scaleX = scaleXVal
-                scaleY = scaleYVal
+                val scaleVal = (1f - progress * 0.75f).coerceIn(0.25f, 1f)
+                scaleX = scaleVal
+                scaleY = scaleVal
                 transformOrigin = TransformOrigin(0.5f, 0.88f)
             }
             .clip(RoundedCornerShape(36.dp))
@@ -67,13 +66,13 @@ fun SwipeDismissContainer(
                 orientation = Orientation.Vertical,
                 enabled = enabled,
                 onDragStopped = { velocity ->
-                    if (offsetY.value > 120f || velocity > 400f) {
+                    if (offsetY.value > 100f || velocity > 350f) {
                         coroutineScope.launch {
                             offsetY.animateTo(
-                                targetValue = 320f,
+                                targetValue = 280f,
                                 animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioLowBouncy,
-                                    stiffness = Spring.StiffnessMediumLow
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMedium
                                 )
                             )
                             onDismiss()

@@ -292,7 +292,7 @@ fun FullPlayerScreen(
             .navigationBarsPadding()
             .padding(horizontal = 6.dp, vertical = 6.dp)
     ) {
-        val isLandscape = maxWidth > maxHeight
+        val isLandscape = this.maxWidth > this.maxHeight
 
         Surface(
             modifier = Modifier.fillMaxSize(),
@@ -368,7 +368,7 @@ fun FullPlayerScreen(
                                     .fillMaxHeight(),
                                 contentAlignment = Alignment.Center
                             ) {
-                                val artSize = minOf(maxWidth * 0.88f, maxHeight * 0.80f, maxHeight * 0.95f)
+                                val artSize = minOf(this.maxWidth * 0.88f, this.maxHeight * 0.80f, this.maxHeight * 0.95f)
                                 PlayerArtwork(
                                     imageUrl = track.album.imageUrl,
                                     trackId = track.id,
@@ -494,7 +494,7 @@ fun FullPlayerScreen(
                                 .weight(1f),
                             contentAlignment = Alignment.Center
                         ) {
-                            val maxArtSize = minOf(maxWidth * 0.82f, maxHeight * 0.82f)
+                            val maxArtSize = minOf(this.maxWidth * 0.82f, this.maxHeight * 0.82f)
                             val artSize = maxArtSize * 0.95f
                             PlayerArtwork(
                                 imageUrl = track.album.imageUrl,
