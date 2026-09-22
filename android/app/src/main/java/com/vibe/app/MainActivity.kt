@@ -38,6 +38,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import com.vibe.core.connect.ConnectDeviceManager
 import com.vibe.core.model.Album
 import com.vibe.core.model.AlbumSummary
@@ -301,8 +302,34 @@ class MainActivity : ComponentActivity() {
                                     val isAnyModalVisible = isFullPlayerVisible || isQueueVisible || isLyricsVisible || isSettingsDialogVisible || isDevicesDialogVisible || selectedTrackForOptions != null
                                     AnimatedVisibility(
                                         visible = !isAnyModalVisible,
-                                        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                                        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+                                        enter = slideInVertically(
+                                            initialOffsetY = { it / 2 },
+                                            animationSpec = spring(
+                                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                stiffness = Spring.StiffnessMediumLow
+                                            )
+                                        ) + scaleIn(
+                                            initialScale = 0.92f,
+                                            transformOrigin = TransformOrigin(0.5f, 0.5f),
+                                            animationSpec = spring(
+                                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                stiffness = Spring.StiffnessMediumLow
+                                            )
+                                        ) + fadeIn(animationSpec = tween(220)),
+                                        exit = slideOutVertically(
+                                            targetOffsetY = { it / 2 },
+                                            animationSpec = spring(
+                                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                                stiffness = Spring.StiffnessMedium
+                                            )
+                                        ) + scaleOut(
+                                            targetScale = 0.92f,
+                                            transformOrigin = TransformOrigin(0.5f, 0.5f),
+                                            animationSpec = spring(
+                                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                                stiffness = Spring.StiffnessMedium
+                                            )
+                                        ) + fadeOut(animationSpec = androidx.compose.animation.core.tween(180))
                                     ) {
                                         Column(
                                             modifier = Modifier
