@@ -23,9 +23,8 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /**
- * Interactive vertical swipe-to-dismiss gesture container that smoothly morphs
- * and minimizes full screen player down into the floating mini-player capsule anchor
- * with bouncy elastic spring physics.
+ * Interactive vertical swipe-to-dismiss gesture container that shrinks
+ * and collapses the full player card directly inside the floating mini-player pill.
  */
 @Composable
 fun SwipeDismissContainer(
@@ -54,24 +53,24 @@ fun SwipeDismissContainer(
         modifier = modifier
             .offset { IntOffset(0, offsetY.value.roundToInt()) }
             .graphicsLayer {
-                val progress = (offsetY.value / 900f).coerceIn(0f, 1f)
-                alpha = (1f - progress * 0.9f).coerceIn(0f, 1f)
-                val scale = (1f - progress * 0.22f).coerceIn(0.78f, 1f)
-                scaleX = scale
-                scaleY = scale
-                transformOrigin = TransformOrigin(0.5f, 0.95f)
-                shadowElevation = (16.dp * progress).toPx()
+                val progress = (offsetY.value / 400f).coerceIn(0f, 1f)
+                alpha = (1f - progress * 0.85f).coerceIn(0f, 1f)
+                val scaleXVal = (1f - progress * 0.70f).coerceIn(0.22f, 1f)
+                val scaleYVal = (1f - progress * 0.75f).coerceIn(0.22f, 1f)
+                scaleX = scaleXVal
+                scaleY = scaleYVal
+                transformOrigin = TransformOrigin(0.5f, 0.88f)
             }
-            .clip(RoundedCornerShape(28.dp * (offsetY.value / 500f).coerceIn(0f, 1f)))
+            .clip(RoundedCornerShape(36.dp))
             .draggable(
                 state = draggableState,
                 orientation = Orientation.Vertical,
                 enabled = enabled,
                 onDragStopped = { velocity ->
-                    if (offsetY.value > 160f || velocity > 450f) {
+                    if (offsetY.value > 120f || velocity > 400f) {
                         coroutineScope.launch {
                             offsetY.animateTo(
-                                targetValue = 1000f,
+                                targetValue = 320f,
                                 animationSpec = spring(
                                     dampingRatio = Spring.DampingRatioLowBouncy,
                                     stiffness = Spring.StiffnessMediumLow

@@ -254,7 +254,7 @@ fun MiniPlayerBar(
 }
 
 /**
- * Material 3 Expressive Full Player Screen matching native Google / Pixel Player aesthetics.
+ * Material 3 Expressive Floating Pill Player Screen matching native Google / Pixel Player aesthetics.
  */
 @Composable
 fun FullPlayerScreen(
@@ -290,36 +290,184 @@ fun FullPlayerScreen(
             .fillMaxSize()
             .statusBarsPadding()
             .navigationBarsPadding()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primaryContainer,
-                        MaterialTheme.colorScheme.surfaceContainerLowest,
-                        MaterialTheme.colorScheme.surface
-                    )
-                )
-            )
+            .padding(horizontal = 6.dp, vertical = 6.dp)
     ) {
         val isLandscape = maxWidth > maxHeight
 
-        if (isLandscape) {
-            // Landscape / Tablet Two-Column Layout
-            Column(
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            shape = RoundedCornerShape(36.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 12.dp,
+            shadowElevation = 16.dp
+        ) {
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalArrangement = Arrangement.SpaceBetween
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primaryContainer,
+                                MaterialTheme.colorScheme.surfaceContainerLowest,
+                                MaterialTheme.colorScheme.surface
+                            )
+                        )
+                    )
             ) {
-                // Drag handle pill + Top Bar
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Box(
+                if (isLandscape) {
+                    // Landscape / Tablet Two-Column Layout
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 2.dp),
-                        contentAlignment = Alignment.Center
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.SpaceBetween
                     ) {
+                        // Drag handle pill + Top Bar
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 2.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(36.dp)
+                                        .height(4.dp)
+                                        .background(
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                            shape = RoundedCornerShape(2.dp)
+                                        )
+                                )
+                            }
+
+                            PlayerTopBar(
+                                contextTitle = playbackState.contextTitle,
+                                activeDevice = playbackState.activeDevice,
+                                onClose = onClose,
+                                onOpenDevices = onOpenDevices,
+                                onOpenQueue = onOpenQueue
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Two columns: Left Artwork, Right Info & Controls
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(24.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Left Column: Artwork
+                            BoxWithConstraints(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                val artSize = minOf(maxWidth * 0.88f, maxHeight * 0.80f, maxHeight * 0.95f)
+                                PlayerArtwork(
+                                    imageUrl = track.album.imageUrl,
+                                    trackId = track.id,
+                                    albumName = track.album.name,
+                                    modifier = Modifier.size(artSize)
+                                )
+                            }
+
+                            // Right Column: Controls and Info
+                            Column(
+                                modifier = Modifier
+                                    .weight(1.3f)
+                                    .fillMaxHeight()
+                                    .padding(vertical = 4.dp),
+                                verticalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                PlayerTrackInfo(
+                                    track = track,
+                                    onArtistClick = onArtistClick,
+                                    onOpenLyrics = onOpenLyrics
+                                )
+
+                                PlayerProgressSection(
+                                    sliderPosition = sliderPosition,
+                                    durationMs = playbackState.durationMs,
+                                    onValueChange = { sliderPosition = it },
+                                    onSeekTo = onSeekTo
+                                )
+
+                                val activeDev = playbackState.activeDevice
+                                if (activeDev != null) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
+                                        onClick = onOpenDevices
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = when (activeDev.type) {
+                                                    DeviceType.SMARTPHONE -> Icons.Default.PhoneAndroid
+                                                    DeviceType.COMPUTER -> Icons.Default.Computer
+                                                    DeviceType.SPEAKER -> Icons.Default.Speaker
+                                                    else -> Icons.Default.SpeakerGroup
+                                                },
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(15.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = stringResource(R.string.devices_listening_on, activeDev.name),
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                }
+
+                                val errMsg = playbackState.lastErrorMessage
+                                if (!errMsg.isNullOrBlank()) {
+                                    PlayerErrorBanner(errorMessage = errMsg)
+                                }
+
+                                PlayerControlsRow(
+                                    isPlaying = playbackState.isPlaying,
+                                    onSkipPrevious = onSkipPrevious,
+                                    onPlayPause = onPlayPause,
+                                    onSkipNext = onSkipNext,
+                                    buttonHeight = 56.dp
+                                )
+
+                                PlayerBottomStrip(
+                                    shuffleEnabled = playbackState.shuffleEnabled,
+                                    repeatMode = playbackState.repeatMode,
+                                    isLiked = isLiked,
+                                    onToggleShuffle = onToggleShuffle,
+                                    onToggleRepeat = onToggleRepeat,
+                                    onToggleLike = onToggleLike,
+                                    height = 48.dp
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    // Portrait Layout: 1 Column
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // Drag handle pill
                         Box(
                             modifier = Modifier
+                                .padding(top = 2.dp, bottom = 4.dp)
                                 .width(36.dp)
                                 .height(4.dp)
                                 .background(
@@ -327,58 +475,47 @@ fun FullPlayerScreen(
                                     shape = RoundedCornerShape(2.dp)
                                 )
                         )
-                    }
 
-                    PlayerTopBar(
-                        contextTitle = playbackState.contextTitle,
-                        activeDevice = playbackState.activeDevice,
-                        onClose = onClose,
-                        onOpenDevices = onOpenDevices,
-                        onOpenQueue = onOpenQueue
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Two columns: Left Artwork, Right Info & Controls
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(24.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Left Column: Artwork
-                    BoxWithConstraints(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        val artSize = minOf(maxWidth * 0.88f, maxHeight * 0.80f, maxHeight * 0.95f)
-                        PlayerArtwork(
-                            imageUrl = track.album.imageUrl,
-                            trackId = track.id,
-                            albumName = track.album.name,
-                            modifier = Modifier.size(artSize)
+                        // 1. Top Bar
+                        PlayerTopBar(
+                            contextTitle = playbackState.contextTitle,
+                            activeDevice = playbackState.activeDevice,
+                            onClose = onClose,
+                            onOpenDevices = onOpenDevices,
+                            onOpenQueue = onOpenQueue
                         )
-                    }
 
-                    // Right Column: Controls and Info
-                    Column(
-                        modifier = Modifier
-                            .weight(1.3f)
-                            .fillMaxHeight()
-                            .padding(vertical = 4.dp),
-                        verticalArrangement = Arrangement.SpaceEvenly
-                    ) {
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // 2. Large Album Artwork
+                        BoxWithConstraints(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val maxArtSize = minOf(maxWidth * 0.82f, maxHeight * 0.82f)
+                            val artSize = maxArtSize * 0.95f
+                            PlayerArtwork(
+                                imageUrl = track.album.imageUrl,
+                                trackId = track.id,
+                                albumName = track.album.name,
+                                modifier = Modifier.size(artSize)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // 3. Track Info + Lyrics Button
                         PlayerTrackInfo(
                             track = track,
                             onArtistClick = onArtistClick,
                             onOpenLyrics = onOpenLyrics
                         )
 
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // 4. Progress Bar + Timestamps + Center Audio Quality Pill
                         PlayerProgressSection(
                             sliderPosition = sliderPosition,
                             durationMs = playbackState.durationMs,
@@ -388,6 +525,7 @@ fun FullPlayerScreen(
 
                         val activeDev = playbackState.activeDevice
                         if (activeDev != null) {
+                            Spacer(modifier = Modifier.height(8.dp))
                             Surface(
                                 shape = CircleShape,
                                 color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
@@ -416,21 +554,29 @@ fun FullPlayerScreen(
                                     )
                                 }
                             }
+                            Spacer(modifier = Modifier.height(6.dp))
+                        } else {
+                            Spacer(modifier = Modifier.height(14.dp))
                         }
 
                         val errMsg = playbackState.lastErrorMessage
                         if (!errMsg.isNullOrBlank()) {
                             PlayerErrorBanner(errorMessage = errMsg)
+                            Spacer(modifier = Modifier.height(8.dp))
                         }
 
+                        // 5. Signature Material 3 Playback Controls (3 Wide Stadium Capsules)
                         PlayerControlsRow(
                             isPlaying = playbackState.isPlaying,
                             onSkipPrevious = onSkipPrevious,
                             onPlayPause = onPlayPause,
                             onSkipNext = onSkipNext,
-                            buttonHeight = 56.dp
+                            buttonHeight = 64.dp
                         )
 
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // 6. Bottom Actions Strip (Shuffle, Repeat, Like)
                         PlayerBottomStrip(
                             shuffleEnabled = playbackState.shuffleEnabled,
                             repeatMode = playbackState.repeatMode,
@@ -438,144 +584,12 @@ fun FullPlayerScreen(
                             onToggleShuffle = onToggleShuffle,
                             onToggleRepeat = onToggleRepeat,
                             onToggleLike = onToggleLike,
-                            height = 48.dp
+                            height = 54.dp
                         )
+
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
-            }
-        } else {
-            // Portrait Layout: 1 Column
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                // Drag handle pill
-                Box(
-                    modifier = Modifier
-                        .padding(top = 2.dp, bottom = 4.dp)
-                        .width(36.dp)
-                        .height(4.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                            shape = RoundedCornerShape(2.dp)
-                        )
-                )
-
-                // 1. Top Bar
-                PlayerTopBar(
-                    contextTitle = playbackState.contextTitle,
-                    activeDevice = playbackState.activeDevice,
-                    onClose = onClose,
-                    onOpenDevices = onOpenDevices,
-                    onOpenQueue = onOpenQueue
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // 2. Large Album Artwork
-                BoxWithConstraints(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    val maxArtSize = minOf(maxWidth * 0.82f, maxHeight * 0.82f)
-                    val artSize = maxArtSize * 0.95f
-                    PlayerArtwork(
-                        imageUrl = track.album.imageUrl,
-                        trackId = track.id,
-                        albumName = track.album.name,
-                        modifier = Modifier.size(artSize)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // 3. Track Info + Lyrics Button
-                PlayerTrackInfo(
-                    track = track,
-                    onArtistClick = onArtistClick,
-                    onOpenLyrics = onOpenLyrics
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // 4. Progress Bar + Timestamps + Center Audio Quality Pill
-                PlayerProgressSection(
-                    sliderPosition = sliderPosition,
-                    durationMs = playbackState.durationMs,
-                    onValueChange = { sliderPosition = it },
-                    onSeekTo = onSeekTo
-                )
-
-                val activeDev = playbackState.activeDevice
-                if (activeDev != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
-                        onClick = onOpenDevices
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp)
-                        ) {
-                            Icon(
-                                imageVector = when (activeDev.type) {
-                                    DeviceType.SMARTPHONE -> Icons.Default.PhoneAndroid
-                                    DeviceType.COMPUTER -> Icons.Default.Computer
-                                    DeviceType.SPEAKER -> Icons.Default.Speaker
-                                    else -> Icons.Default.SpeakerGroup
-                                },
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = stringResource(R.string.devices_listening_on, activeDev.name),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(6.dp))
-                } else {
-                    Spacer(modifier = Modifier.height(14.dp))
-                }
-
-                val errMsg = playbackState.lastErrorMessage
-                if (!errMsg.isNullOrBlank()) {
-                    PlayerErrorBanner(errorMessage = errMsg)
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-
-                // 5. Signature Material 3 Playback Controls (3 Wide Stadium Capsules)
-                PlayerControlsRow(
-                    isPlaying = playbackState.isPlaying,
-                    onSkipPrevious = onSkipPrevious,
-                    onPlayPause = onPlayPause,
-                    onSkipNext = onSkipNext,
-                    buttonHeight = 64.dp
-                )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // 6. Bottom Actions Strip (Shuffle, Repeat, Like)
-                PlayerBottomStrip(
-                    shuffleEnabled = playbackState.shuffleEnabled,
-                    repeatMode = playbackState.repeatMode,
-                    isLiked = isLiked,
-                    onToggleShuffle = onToggleShuffle,
-                    onToggleRepeat = onToggleRepeat,
-                    onToggleLike = onToggleLike,
-                    height = 54.dp
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }

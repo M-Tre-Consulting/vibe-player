@@ -681,38 +681,38 @@ class MainActivity : ComponentActivity() {
                                  }
                              }
 
-                            // Full Player Screen Modal - shrinks and minimizes down into the mini player bar position on dismissal
+                            // Full Player Screen Modal - shrinks and collapses directly into the floating mini player pill
                             BackHandler(enabled = isFullPlayerVisible) { isFullPlayerVisible = false }
                             AnimatedVisibility(
                                 visible = isFullPlayerVisible,
                                 enter = slideInVertically(
-                                    initialOffsetY = { (it * 0.8f).toInt() },
+                                    initialOffsetY = { (it * 0.35f).toInt() },
                                     animationSpec = spring(
                                         dampingRatio = Spring.DampingRatioLowBouncy,
                                         stiffness = Spring.StiffnessMediumLow
                                     )
                                 ) + scaleIn(
-                                    initialScale = 0.82f,
-                                    transformOrigin = TransformOrigin(0.5f, 0.95f),
+                                    initialScale = 0.22f,
+                                    transformOrigin = TransformOrigin(0.5f, 0.88f),
                                     animationSpec = spring(
                                         dampingRatio = Spring.DampingRatioLowBouncy,
                                         stiffness = Spring.StiffnessMediumLow
                                     )
-                                ) + fadeIn(animationSpec = androidx.compose.animation.core.tween(250)),
+                                ) + fadeIn(animationSpec = tween(220)),
                                 exit = slideOutVertically(
-                                    targetOffsetY = { (it * 0.8f).toInt() },
+                                    targetOffsetY = { (it * 0.35f).toInt() },
                                     animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioNoBouncy,
-                                        stiffness = Spring.StiffnessMedium
+                                        dampingRatio = Spring.DampingRatioLowBouncy,
+                                        stiffness = Spring.StiffnessMediumLow
                                     )
                                 ) + scaleOut(
-                                    targetScale = 0.82f,
-                                    transformOrigin = TransformOrigin(0.5f, 0.95f),
+                                    targetScale = 0.22f,
+                                    transformOrigin = TransformOrigin(0.5f, 0.88f),
                                     animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioNoBouncy,
-                                        stiffness = Spring.StiffnessMedium
+                                        dampingRatio = Spring.DampingRatioLowBouncy,
+                                        stiffness = Spring.StiffnessMediumLow
                                     )
-                                ) + fadeOut(animationSpec = androidx.compose.animation.core.tween(200))
+                                ) + fadeOut(animationSpec = tween(180))
                             ) {
                                 SwipeDismissContainer(
                                     onDismiss = { isFullPlayerVisible = false }
