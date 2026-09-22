@@ -446,15 +446,17 @@ fun FullPlayerScreen(
                         )
                 )
 
-                // 1. Top Bar - collapsible with pull-down gesture
+                // 1. Top Bar - collapsible with slide animation
                 PlayerTopBar(
-                    contextTitle = if (showTrackName) playbackState.contextTitle else stringResource(com.vibe.core.ui.R.string.player_now_playing),
+                    contextTitle = playbackState.contextTitle,
                     activeDevice = playbackState.activeDevice,
                     onClose = onClose,
                     onOpenDevices = onOpenDevices,
                     onOpenQueue = onOpenQueue,
                     isScrollable = true,
-                    onScrollDown = { showTrackName = false }
+                    onScrollDown = {
+                        showTrackName = false
+                    }
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -604,16 +606,22 @@ private fun PlayerTopBar(
                     targetState = contextTitle ?: stringResource(com.vibe.core.ui.R.string.player_now_playing),
                     transitionSpec = {
                         (slideInVertically(
-                            initialOffsetY = { it / 2 },
-                            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+                            initialOffsetY = { it },
+                            animationSpec = spring(
+                                stiffness = Spring.StiffnessMediumLow,
+                                dampingRatio = Spring.DampingRatioMediumBouncy
+                            )
                         ) + fadeIn(animationSpec = tween(300))).togetherWith(
                             slideOutVertically(
-                                targetOffsetY = { -it / 2 },
-                                animationSpec = tween(200)
+                                targetOffsetY = { 0 },
+                                animationSpec = spring(
+                                    stiffness = Spring.StiffnessMediumLow,
+                                    dampingRatio = Spring.DampingRatioMediumBouncy
+                                )
                             ) + fadeOut(animationSpec = tween(200))
                         )
                     },
-                    label = "ScrollingTitle"
+                    label = "TitleSlide"
                 ) { title ->
                     Text(
                         text = title,
