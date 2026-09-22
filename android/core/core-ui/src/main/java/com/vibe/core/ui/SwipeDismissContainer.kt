@@ -66,7 +66,7 @@ fun SwipeDismissContainer(
                             offsetY.animateTo(
                                 targetValue = 0f,
                                 animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioMedium,
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
                                     stiffness = Spring.StiffnessMedium
                                 )
                             )
