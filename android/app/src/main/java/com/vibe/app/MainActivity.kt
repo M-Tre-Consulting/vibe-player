@@ -653,7 +653,8 @@ class MainActivity : ComponentActivity() {
                                  }
                              }
 
-                            // Full Player Screen Modal with expressive spring slide animations
+                            // Full Player Screen Modal - positioned above AnimatedContent so dismissal reveals what's underneath
+                            BackHandler { isFullPlayerVisible = false }
                             AnimatedVisibility(
                                 visible = isFullPlayerVisible,
                                 enter = slideInVertically(
@@ -671,62 +672,53 @@ class MainActivity : ComponentActivity() {
                                     )
                                 ) + fadeOut(animationSpec = androidx.compose.animation.core.tween(200))
                             ) {
-                                BackHandler { isFullPlayerVisible = false }
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(MaterialTheme.colorScheme.background)
-                                ) {
-                                    SwipeDismissContainer(onDismiss = { isFullPlayerVisible = false }) {
-                                        FullPlayerScreen(
-                                            playbackState = playbackState,
-                                            isLiked = playbackState.currentTrack?.let { ct ->
-                                                val cleanId = ct.id.substringAfterLast(":")
-                                                userLikedTracks.any { it.id.substringAfterLast(":") == cleanId }
-                                            } ?: false,
-                                            onPlayPause = {
-                                                if (playbackState.isPlaying) audioPlayer.pause()
-                                                else audioPlayer.resume()
-                                            },
-                                            onSkipNext = { audioPlayer.skipToNext() },
-                                            onSkipPrevious = { audioPlayer.skipToPrevious() },
-                                            onSeekTo = { pos -> audioPlayer.seekTo(pos) },
-                                            onClose = { isFullPlayerVisible = false },
-                                            onOpenDevices = { isDevicesDialogVisible = true },
-                                            onOpenQueue = {
-                                                isQueueVisible = true
-                                                val routingPlayer = audioPlayer as? RoutingAudioPlayerImpl
-                                                if (routingPlayer?.activeEngine == RoutingAudioPlayerImpl.ActiveEngine.CONNECT &&
-                                                    currentQueue.userQueue.isEmpty() && currentQueue.contextQueue.isEmpty()) {
-                                                    lifecycleScope.launch {
-                                                        apiService.getUserQueue().onSuccess { q ->
-                                                            routingPlayer.queueManager.setQueue(q)
-                                                        }
-                                                    }
+                                FullPlayerScreen(
+                                    playbackState = playbackState,
+                                    isLiked = playbackState.currentTrack?.let { ct ->
+                                        val cleanId = ct.id.substringAfterLast(":")
+                                        userLikedTracks.any { it.id.substringAfterLast(":") == cleanId }
+                                    } ?: false,
+                                    onPlayPause = {
+                                        if (playbackState.isPlaying) audioPlayer.pause()
+                                        else audioPlayer.resume()
+                                    },
+                                    onSkipNext = { audioPlayer.skipToNext() },
+                                    onSkipPrevious = { audioPlayer.skipToPrevious() },
+                                    onSeekTo = { pos -> audioPlayer.seekTo(pos) },
+                                    onClose = { isFullPlayerVisible = false },
+                                    onOpenDevices = { isDevicesDialogVisible = true },
+                                    onOpenQueue = {
+                                        isQueueVisible = true
+                                        val routingPlayer = audioPlayer as? RoutingAudioPlayerImpl
+                                        if (routingPlayer?.activeEngine == RoutingAudioPlayerImpl.ActiveEngine.CONNECT &&
+                                            currentQueue.userQueue.isEmpty() && currentQueue.contextQueue.isEmpty()) {
+                                            lifecycleScope.launch {
+                                                apiService.getUserQueue().onSuccess { q ->
+                                                    routingPlayer.queueManager.setQueue(q)
                                                 }
-                                            },
-                                            onArtistClick = { artistId ->
-                                                isFullPlayerVisible = false
-                                                lifecycleScope.launch {
-                                                    apiService.getArtist(artistId).onSuccess { activeArtist = it }
-                                                }
-                                            },
-                                            onOpenLyrics = { isLyricsVisible = true },
-                                            onToggleShuffle = { audioPlayer.setShuffle(!playbackState.shuffleEnabled) },
-                                            onToggleRepeat = {
-                                                val next = when (playbackState.repeatMode) {
-                                                    RepeatMode.OFF -> RepeatMode.ALL
-                                                    RepeatMode.ALL -> RepeatMode.ONE
-                                                    RepeatMode.ONE -> RepeatMode.OFF
-                                                }
-                                                audioPlayer.setRepeatMode(next)
-                                            },
-                                            onToggleLike = {
-                                                playbackState.currentTrack?.let { toggleTrackLike(it) }
                                             }
-                                        )
+                                        }
+                                    },
+                                    onArtistClick = { artistId ->
+                                        isFullPlayerVisible = false
+                                        lifecycleScope.launch {
+                                            apiService.getArtist(artistId).onSuccess { activeArtist = it }
+                                        }
+                                    },
+                                    onOpenLyrics = { isLyricsVisible = true },
+                                    onToggleShuffle = { audioPlayer.setShuffle(!playbackState.shuffleEnabled) },
+                                    onToggleRepeat = {
+                                        val next = when (playbackState.repeatMode) {
+                                            RepeatMode.OFF -> RepeatMode.ALL
+                                            RepeatMode.ALL -> RepeatMode.ONE
+                                            RepeatMode.ONE -> RepeatMode.OFF
+                                        }
+                                        audioPlayer.setRepeatMode(next)
+                                    },
+                                    onToggleLike = {
+                                        playbackState.currentTrack?.let { toggleTrackLike(it) }
                                     }
-                                }
+                                )
                             }
 
                             // Lyrics Screen Modal
