@@ -1,7 +1,6 @@
 package com.vibe.feature.player
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
@@ -14,13 +13,11 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -34,7 +31,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -45,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.vibe.core.model.*
+import com.vibe.core.ui.R
 
 @Composable
 fun MiniPlayerBar(
@@ -148,7 +145,7 @@ fun MiniPlayerBar(
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                modifier = Modifier.basicMarquee()
                             )
                             Text(
                                 text = targetTrack.artists.joinToString(", ") { it.name },
@@ -197,7 +194,7 @@ fun MiniPlayerBar(
                                     )
                                     Spacer(modifier = Modifier.width(3.dp))
                                     Text(
-                                        text = stringResource(com.vibe.core.ui.R.string.devices_listening_on, activeDev.name),
+                                        text = stringResource(R.string.devices_listening_on, activeDev.name),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.primary,
                                         maxLines = 1,
@@ -214,7 +211,7 @@ fun MiniPlayerBar(
                     ) {
                         Icon(
                             imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = stringResource(com.vibe.core.ui.R.string.player_favorite),
+                            contentDescription = stringResource(R.string.player_favorite),
                             tint = if (isLiked) Color(0xFFFF5252) else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
                         )
@@ -232,8 +229,8 @@ fun MiniPlayerBar(
                             Icon(
                                 imageVector = if (playbackState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                 contentDescription = stringResource(
-                                    if (playbackState.isPlaying) com.vibe.core.ui.R.string.player_pause
-                                    else com.vibe.core.ui.R.string.player_play
+                                    if (playbackState.isPlaying) R.string.player_pause
+                                    else R.string.player_play
                                 ),
                                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                 modifier = Modifier.size(22.dp)
@@ -246,7 +243,7 @@ fun MiniPlayerBar(
                     IconButton(onClick = onSkipNext) {
                         Icon(
                             imageVector = Icons.Default.SkipNext,
-                            contentDescription = stringResource(com.vibe.core.ui.R.string.player_skip_next),
+                            contentDescription = stringResource(R.string.player_skip_next),
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -278,69 +275,88 @@ fun FullPlayerScreen(
     onToggleLike: () -> Unit = {}
 ) {
     var lastKnownTrack by remember { mutableStateOf(playbackState.currentTrack) }
+    LaunchedEffect(playbackState.currentTrack) {
+        if (playbackState.currentTrack != null) {
+            lastKnownTrack = playbackState.currentTrack
+        }
+    }
     val track = playbackState.currentTrack ?: lastKnownTrack ?: return
     var sliderPosition by remember(playbackState.positionMs) {
         mutableFloatStateOf(playbackState.positionMs.toFloat())
     }
 
-    // Global state for title expansion - properly scoped at FullPlayerScreen level
-    var isTitleExpanded by remember { mutableStateOf(false) }
-    var showTrackName by remember { mutableStateOf(true) }
-
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
+            .statusBarsPadding()
+            .navigationBarsPadding()
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                        MaterialTheme.colorScheme.primaryContainer,
                         MaterialTheme.colorScheme.surfaceContainerLowest,
-                        MaterialTheme.colorScheme.background
+                        MaterialTheme.colorScheme.surface
                     )
                 )
             )
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .padding(horizontal = 24.dp, vertical = 10.dp)
     ) {
         val isLandscape = maxWidth > maxHeight
 
         if (isLandscape) {
-            // Landscape / Tablet Two-Column Layout - No drag handle, auto collapse title
+            // Landscape / Tablet Two-Column Layout
             Column(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
+                // Drag handle pill + Top Bar
                 Column(modifier = Modifier.fillMaxWidth()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 2.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(36.dp)
+                                .height(4.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                    shape = RoundedCornerShape(2.dp)
+                                )
+                        )
+                    }
+
                     PlayerTopBar(
-                        contextTitle = playbackState.contextTitle ?: stringResource(com.vibe.core.ui.R.string.player_now_playing),
+                        contextTitle = playbackState.contextTitle,
                         activeDevice = playbackState.activeDevice,
                         onClose = onClose,
                         onOpenDevices = onOpenDevices,
-                        onOpenQueue = onOpenQueue,
-                        isScrollable = false
+                        onOpenQueue = onOpenQueue
                     )
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Two columns: Left Artwork, Right Info & Controls
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(32.dp),
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(24.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Left Column: Artwork (fits both width and height, perfect square, never overflows)
+                    // Left Column: Artwork
                     BoxWithConstraints(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight(),
                         contentAlignment = Alignment.Center
                     ) {
-                        val artSize = minOf(maxWidth * 0.95f, maxHeight * 0.85f)
+                        val artSize = minOf(maxWidth * 0.88f, maxHeight * 0.80f, maxHeight * 0.95f)
                         PlayerArtwork(
                             imageUrl = track.album.imageUrl,
                             trackId = track.id,
@@ -394,7 +410,7 @@ fun FullPlayerScreen(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = stringResource(com.vibe.core.ui.R.string.devices_listening_on, activeDev.name),
+                                        text = stringResource(R.string.devices_listening_on, activeDev.name),
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.primary
                                     )
@@ -428,13 +444,15 @@ fun FullPlayerScreen(
                 }
             }
         } else {
-            // Portrait Layout: 1 Column (carefully constrained to never overflow)
+            // Portrait Layout: 1 Column
             Column(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Drag handle pill - indicates pull-down gesture to close player
+                // Drag handle pill
                 Box(
                     modifier = Modifier
                         .padding(top = 2.dp, bottom = 4.dp)
@@ -446,29 +464,26 @@ fun FullPlayerScreen(
                         )
                 )
 
-                // 1. Top Bar - collapsible with slide animation
+                // 1. Top Bar
                 PlayerTopBar(
                     contextTitle = playbackState.contextTitle,
                     activeDevice = playbackState.activeDevice,
                     onClose = onClose,
                     onOpenDevices = onOpenDevices,
-                    onOpenQueue = onOpenQueue,
-                    isScrollable = true,
-                    onScrollDown = {
-                        showTrackName = false
-                    }
+                    onOpenQueue = onOpenQueue
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // 2. Large Album Artwork (Square, strictly constrained to viewport bounds)
+                // 2. Large Album Artwork
                 BoxWithConstraints(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
                     contentAlignment = Alignment.Center
                 ) {
-                    val artSize = minOf(maxWidth * 0.90f, maxHeight * 0.90f)
+                    val maxArtSize = minOf(maxWidth * 0.82f, maxHeight * 0.82f)
+                    val artSize = maxArtSize * 0.95f
                     PlayerArtwork(
                         imageUrl = track.album.imageUrl,
                         trackId = track.id,
@@ -521,7 +536,7 @@ fun FullPlayerScreen(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = stringResource(com.vibe.core.ui.R.string.devices_listening_on, activeDev.name),
+                                text = stringResource(R.string.devices_listening_on, activeDev.name),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -573,9 +588,7 @@ private fun PlayerTopBar(
     onClose: () -> Unit,
     onOpenDevices: () -> Unit,
     onOpenQueue: () -> Unit,
-    modifier: Modifier = Modifier,
-    isScrollable: Boolean = false,
-    onScrollDown: () -> Unit = {}
+    modifier: Modifier = Modifier
 ) {
     val isConnectActive = activeDevice != null
     Row(
@@ -592,56 +605,18 @@ private fun PlayerTopBar(
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Default.KeyboardArrowDown,
-                    contentDescription = stringResource(com.vibe.core.ui.R.string.player_collapse),
+                    contentDescription = stringResource(R.string.player_collapse),
                     tint = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
 
-        if (isScrollable) {
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                AnimatedContent(
-                    targetState = contextTitle ?: stringResource(com.vibe.core.ui.R.string.player_now_playing),
-                    transitionSpec = {
-                        (slideInVertically(
-                            initialOffsetY = { it },
-                            animationSpec = spring(
-                                stiffness = Spring.StiffnessMediumLow,
-                                dampingRatio = Spring.DampingRatioMediumBouncy
-                            )
-                        ) + fadeIn(animationSpec = tween(300))).togetherWith(
-                            slideOutVertically(
-                                targetOffsetY = { 0 },
-                                animationSpec = spring(
-                                    stiffness = Spring.StiffnessMediumLow,
-                                    dampingRatio = Spring.DampingRatioMediumBouncy
-                                )
-                            ) + fadeOut(animationSpec = tween(200))
-                        )
-                    },
-                    label = "TitleSlide"
-                ) { title ->
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.clickable { onScrollDown() }
-                    )
-                }
-            }
-        } else {
-            Text(
-                text = contextTitle ?: stringResource(com.vibe.core.ui.R.string.player_now_playing),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
+        Text(
+            text = contextTitle ?: stringResource(R.string.player_now_playing),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Surface(
@@ -658,7 +633,7 @@ private fun PlayerTopBar(
                             DeviceType.SPEAKER -> Icons.Default.Speaker
                             else -> Icons.Default.SpeakerGroup
                         },
-                        contentDescription = stringResource(com.vibe.core.ui.R.string.player_devices),
+                        contentDescription = stringResource(R.string.player_devices),
                         tint = if (isConnectActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(20.dp)
                     )
@@ -674,7 +649,7 @@ private fun PlayerTopBar(
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.QueueMusic,
-                        contentDescription = stringResource(com.vibe.core.ui.R.string.player_queue),
+                        contentDescription = stringResource(R.string.player_queue),
                         tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(20.dp)
                     )
@@ -771,7 +746,7 @@ private fun PlayerTrackInfo(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    modifier = Modifier.basicMarquee()
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
@@ -796,7 +771,7 @@ private fun PlayerTrackInfo(
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Default.Lyrics,
-                    contentDescription = stringResource(com.vibe.core.ui.R.string.player_lyrics),
+                    contentDescription = stringResource(R.string.player_lyrics),
                     tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(22.dp)
                 )
@@ -852,7 +827,7 @@ private fun PlayerProgressSection(
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             ) {
                 Text(
-                    text = stringResource(com.vibe.core.ui.R.string.player_audio_spec_default),
+                    text = stringResource(R.string.player_audio_spec_default),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -904,7 +879,7 @@ private fun PlayerControlsRow(
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Default.SkipPrevious,
-                    contentDescription = stringResource(com.vibe.core.ui.R.string.player_skip_previous),
+                    contentDescription = stringResource(R.string.player_skip_previous),
                     tint = MaterialTheme.colorScheme.onSecondaryContainer,
                     modifier = Modifier.size(30.dp)
                 )
@@ -933,8 +908,8 @@ private fun PlayerControlsRow(
                 Icon(
                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     contentDescription = stringResource(
-                        if (isPlaying) com.vibe.core.ui.R.string.player_pause
-                        else com.vibe.core.ui.R.string.player_play
+                        if (isPlaying) R.string.player_pause
+                        else R.string.player_play
                     ),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.size(34.dp)
@@ -963,7 +938,7 @@ private fun PlayerControlsRow(
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Default.SkipNext,
-                    contentDescription = stringResource(com.vibe.core.ui.R.string.player_skip_next),
+                    contentDescription = stringResource(R.string.player_skip_next),
                     tint = MaterialTheme.colorScheme.onSecondaryContainer,
                     modifier = Modifier.size(30.dp)
                 )
@@ -998,7 +973,7 @@ private fun PlayerBottomStrip(
             IconButton(onClick = onToggleShuffle) {
                 Icon(
                     imageVector = Icons.Default.Shuffle,
-                    contentDescription = stringResource(com.vibe.core.ui.R.string.player_shuffle),
+                    contentDescription = stringResource(R.string.player_shuffle),
                     tint = if (shuffleEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -1006,7 +981,7 @@ private fun PlayerBottomStrip(
             IconButton(onClick = onToggleRepeat) {
                 Icon(
                     imageVector = if (repeatMode == RepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
-                    contentDescription = stringResource(com.vibe.core.ui.R.string.player_repeat),
+                    contentDescription = stringResource(R.string.player_repeat),
                     tint = if (repeatMode != RepeatMode.OFF) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -1014,7 +989,7 @@ private fun PlayerBottomStrip(
             IconButton(onClick = onToggleLike) {
                 Icon(
                     imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = stringResource(com.vibe.core.ui.R.string.player_favorite),
+                    contentDescription = stringResource(R.string.player_favorite),
                     tint = if (isLiked) Color(0xFFFF5252) else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -1055,5 +1030,3 @@ private fun PlayerErrorBanner(
         }
     }
 }
-
-
