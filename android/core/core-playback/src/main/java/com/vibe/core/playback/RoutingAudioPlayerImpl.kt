@@ -170,6 +170,14 @@ class RoutingAudioPlayerImpl(
         if (match != null) {
             return context.getString(UiR.string.playback_error_spotify_format, match.groupValues[1])
         }
+        
+        // Enhanced fallback for general IPC/connection issues
+        if (raw.contains("unsupported", ignoreCase = true) || 
+            raw.contains("unavailable", ignoreCase = true) ||
+            raw.contains("connection", ignoreCase = true) ||
+            raw.contains("failed", ignoreCase = true)) {
+            return context.getString(UiR.string.playback_error_ipc_generic_failure)
+        }
         return raw
     }
 
