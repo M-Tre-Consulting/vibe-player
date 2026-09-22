@@ -117,8 +117,8 @@ class QueueManager {
             listOf(PlayedTrackRecord(current)) + q.recentHistory.take(19)
         } else q.recentHistory
 
-        val newUserQueue = if (q.userQueue.isNotEmpty()) q.userQueue.drop(1) else emptyList()
-        val newContextQueue = if (q.userQueue.isNotEmpty()) q.contextQueue else q.contextQueue.drop(1)
+        val newUserQueue = if (nextTrack.id == q.userQueue.firstOrNull()?.id) q.userQueue.drop(1) else q.userQueue
+        val newContextQueue = if (nextTrack.id == q.contextQueue.firstOrNull()?.id) q.contextQueue.drop(1) else q.contextQueue
 
         _queue.value = q.copy(
             currentlyPlaying = nextTrack,
