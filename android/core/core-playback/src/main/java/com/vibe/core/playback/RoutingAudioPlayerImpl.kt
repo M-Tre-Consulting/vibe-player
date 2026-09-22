@@ -176,7 +176,7 @@ class RoutingAudioPlayerImpl(
             raw.contains("unavailable", ignoreCase = true) ||
             raw.contains("connection", ignoreCase = true) ||
             raw.contains("failed", ignoreCase = true)) {
-            return context.getString(UiR.string.playback_error_ipc_generic_failure)
+            return context.getString(UiR.string.generic_error_format, raw)
         }
         return raw
     }
