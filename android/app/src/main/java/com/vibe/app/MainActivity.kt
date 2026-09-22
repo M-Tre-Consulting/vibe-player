@@ -299,15 +299,37 @@ class MainActivity : ComponentActivity() {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 Scaffold(
                                 bottomBar = {
-                                    val isOtherModalVisible = isQueueVisible || isLyricsVisible || isSettingsDialogVisible || isDevicesDialogVisible || selectedTrackForOptions != null
+                                    val isAnyModalVisible = isFullPlayerVisible || isQueueVisible || isLyricsVisible || isSettingsDialogVisible || isDevicesDialogVisible || selectedTrackForOptions != null
                                     AnimatedVisibility(
-                                        visible = !isOtherModalVisible,
+                                        visible = !isAnyModalVisible,
                                         enter = slideInVertically(
-                                            initialOffsetY = { it / 2 }
-                                        ) + fadeIn(animationSpec = tween(200)),
+                                            initialOffsetY = { it / 2 },
+                                            animationSpec = spring(
+                                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                stiffness = Spring.StiffnessMediumLow
+                                            )
+                                        ) + scaleIn(
+                                            initialScale = 0.92f,
+                                            transformOrigin = TransformOrigin(0.5f, 0.5f),
+                                            animationSpec = spring(
+                                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                stiffness = Spring.StiffnessMediumLow
+                                            )
+                                        ) + fadeIn(animationSpec = tween(220)),
                                         exit = slideOutVertically(
-                                            targetOffsetY = { it / 2 }
-                                        ) + fadeOut(animationSpec = tween(150))
+                                            targetOffsetY = { it / 2 },
+                                            animationSpec = spring(
+                                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                                stiffness = Spring.StiffnessMedium
+                                            )
+                                        ) + scaleOut(
+                                            targetScale = 0.92f,
+                                            transformOrigin = TransformOrigin(0.5f, 0.5f),
+                                            animationSpec = spring(
+                                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                                stiffness = Spring.StiffnessMedium
+                                            )
+                                        ) + fadeOut(animationSpec = tween(180))
                                     ) {
                                         Column(
                                             modifier = Modifier
