@@ -320,24 +320,47 @@ class SpotifyApiServiceImpl(
 
             val json = Json { ignoreUnknownKeys = true }
             val root = json.parseToJsonElement(jsonString)
-            val state = root.jsonObject["props"]?.jsonObject?.get("pageProps")?.jsonObject?.get("state")?.jsonObject
-            val entity = state?.get("data")?.jsonObject?.get("entity")?.jsonObject ?: return null
+            val pageProps = root.jsonObject["props"]?.jsonObject?.get("pageProps")?.jsonObject
+            val state = pageProps?.get("state")?.jsonObject ?: pageProps?.get("data")?.jsonObject
+            val entity = state?.get("data")?.jsonObject?.get("entity")?.jsonObject
+                ?: state?.get("entity")?.jsonObject
+                ?: root.jsonObject["entity"]?.jsonObject
+                ?: return null
 
-            val name = entity["name"]?.jsonPrimitive?.contentOrNull ?: ""
+            val name = entity["name"]?.jsonPrimitive?.contentOrNull
+                ?: entity["title"]?.jsonPrimitive?.contentOrNull
+                ?: ""
             val subtitle = entity["subtitle"]?.jsonPrimitive?.contentOrNull
+                ?: entity["description"]?.jsonPrimitive?.contentOrNull
             val coverUrl = entity["coverArt"]?.jsonObject?.get("sources")?.jsonArray?.firstOrNull()?.jsonObject?.get("url")?.jsonPrimitive?.contentOrNull
                 ?: entity["visualIdentity"]?.jsonObject?.get("image")?.jsonArray?.firstOrNull()?.jsonObject?.get("url")?.jsonPrimitive?.contentOrNull
+                ?: entity["images"]?.jsonArray?.firstOrNull()?.jsonObject?.get("url")?.jsonPrimitive?.contentOrNull
 
-            val trackList = entity["trackList"]?.jsonArray ?: JsonArray(emptyList())
+            val trackList = entity["trackList"]?.jsonArray
+                ?: entity["tracks"]?.jsonObject?.get("items")?.jsonArray
+                ?: entity["items"]?.jsonArray
+                ?: JsonArray(emptyList())
+
             val tracks = trackList.mapNotNull { trackElement ->
-                val trackObj = trackElement.jsonObject
+                val obj = trackElement.jsonObject
+                val trackObj = obj["track"]?.jsonObject ?: obj["item"]?.jsonObject ?: obj
                 val uri = trackObj["uri"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
                 val trackId = uri.substringAfterLast(":")
-                val title = trackObj["title"]?.jsonPrimitive?.contentOrNull ?: "Unknown Track"
-                val artistName = trackObj["subtitle"]?.jsonPrimitive?.contentOrNull ?: subtitle ?: "Unknown Artist"
-                val duration = trackObj["duration"]?.jsonPrimitive?.longOrNull ?: 180000L
-                val isPlayable = trackObj["isPlayable"]?.jsonPrimitive?.booleanOrNull ?: true
+                val title = trackObj["title"]?.jsonPrimitive?.contentOrNull
+                    ?: trackObj["name"]?.jsonPrimitive?.contentOrNull
+                    ?: "Unknown Track"
+                val artistName = trackObj["subtitle"]?.jsonPrimitive?.contentOrNull
+                    ?: trackObj["artists"]?.jsonArray?.firstOrNull()?.jsonObject?.get("name")?.jsonPrimitive?.contentOrNull
+                    ?: subtitle
+                    ?: "Unknown Artist"
+                val duration = trackObj["duration"]?.jsonPrimitive?.longOrNull
+                    ?: trackObj["duration_ms"]?.jsonPrimitive?.longOrNull
+                    ?: 180000L
+                val isPlayable = trackObj["isPlayable"]?.jsonPrimitive?.booleanOrNull
+                    ?: trackObj["is_playable"]?.jsonPrimitive?.booleanOrNull
+                    ?: true
                 val previewUrl = trackObj["audioPreview"]?.jsonObject?.get("url")?.jsonPrimitive?.contentOrNull
+                    ?: trackObj["preview_url"]?.jsonPrimitive?.contentOrNull
 
                 Track(
                     id = trackId,

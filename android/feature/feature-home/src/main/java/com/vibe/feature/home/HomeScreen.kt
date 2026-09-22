@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.vibe.core.model.Playlist
 import com.vibe.core.model.Track
+import com.vibe.core.ui.R
 import java.util.Calendar
 
 @Composable
@@ -160,6 +161,62 @@ fun HomeScreen(
 
         // 3. Made For You / User Playlists
         item {
+            val recommendedPlaylists = remember {
+                listOf(
+                    Playlist(
+                        id = "37i9dQZF1DXcBWIGoYBM5M",
+                        uri = "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M",
+                        name = "Today's Top Hits",
+                        description = "The hottest 50 tracks.",
+                        coverImageUrl = "https://image-cdn-ak.spotifycdn.com/image/ab67706f00000002622db66d648829915229cb74",
+                        ownerName = "Spotify",
+                        ownerId = "spotify",
+                        totalTracks = 50
+                    ),
+                    Playlist(
+                        id = "37i9dQZEVXbMDoHDwVNlu1",
+                        uri = "spotify:playlist:37i9dQZEVXbMDoHDwVNlu1",
+                        name = "Top 50 - Global",
+                        description = "Your daily update of the most played tracks.",
+                        coverImageUrl = "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da84fc9335f6087d152c96c464c2",
+                        ownerName = "Spotify",
+                        ownerId = "spotify",
+                        totalTracks = 50
+                    ),
+                    Playlist(
+                        id = "37i9dQZF1DWUa8ZHimA3L4",
+                        uri = "spotify:playlist:37i9dQZF1DWUa8ZHimA3L4",
+                        name = "Pop Rising",
+                        description = "The future of pop music.",
+                        coverImageUrl = "https://image-cdn-ak.spotifycdn.com/image/ab67706f000000028a47ff8479e0a81156828960",
+                        ownerName = "Spotify",
+                        ownerId = "spotify",
+                        totalTracks = 50
+                    ),
+                    Playlist(
+                        id = "37i9dQZF1DX4WYpdgoI1vT",
+                        uri = "spotify:playlist:37i9dQZF1DX4WYpdgoI1vT",
+                        name = "Chill Hits",
+                        description = "Kick back to the best chill pop.",
+                        coverImageUrl = "https://image-cdn-ak.spotifycdn.com/image/ab67706f00000002b60db548a3138b369527f511",
+                        ownerName = "Spotify",
+                        ownerId = "spotify",
+                        totalTracks = 50
+                    ),
+                    Playlist(
+                        id = "37i9dQZF1DXdP3ePZ3SpA1",
+                        uri = "spotify:playlist:37i9dQZF1DXdP3ePZ3SpA1",
+                        name = "Feelin' Good",
+                        description = "Feel good pop hits to boost your mood.",
+                        coverImageUrl = "https://image-cdn-ak.spotifycdn.com/image/ab67706f00000002e1c313a3038a8f1073801083",
+                        ownerName = "Spotify",
+                        ownerId = "spotify",
+                        totalTracks = 50
+                    )
+                )
+            }
+            val displayPlaylists = if (playlists.isNotEmpty()) playlists else recommendedPlaylists
+
             Text(
                 stringResource(com.vibe.core.ui.R.string.home_made_for_you),
                 style = MaterialTheme.typography.titleLarge,
@@ -167,79 +224,59 @@ fun HomeScreen(
                 color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(12.dp))
-            if (playlists.isNotEmpty()) {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    items(playlists, key = { it.id }) { playlist ->
-                        Card(
-                            modifier = Modifier
-                                .width(152.dp)
-                                .clickable { onPlaylistClick(playlist.id) },
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                            )
-                        ) {
-                            Column(modifier = Modifier.padding(10.dp)) {
-                                if (!playlist.coverImageUrl.isNullOrBlank()) {
-                                    AsyncImage(
-                                        model = playlist.coverImageUrl,
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                items(displayPlaylists, key = { it.id }) { playlist ->
+                    Card(
+                        modifier = Modifier
+                            .width(152.dp)
+                            .clickable { onPlaylistClick(playlist.id) },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            if (!playlist.coverImageUrl.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = playlist.coverImageUrl,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .aspectRatio(1f)
+                                        .clip(RoundedCornerShape(12.dp)),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .aspectRatio(1f)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.QueueMusic,
                                         contentDescription = null,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .aspectRatio(1f)
-                                            .clip(RoundedCornerShape(12.dp)),
-                                        contentScale = ContentScale.Crop
+                                        modifier = Modifier.size(40.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
-                                } else {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .aspectRatio(1f)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            Icons.Default.QueueMusic,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(40.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
                                 }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    playlist.name,
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    stringResource(com.vibe.core.ui.R.string.library_tracks_count, playlist.totalTracks),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1
-                                )
                             }
-                        }
-                    }
-                }
-            } else {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(5) { index ->
-                        Card(
-                            modifier = Modifier.size(width = 152.dp, height = 190.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            onClick = { onPlaylistClick("playlist_$index") }
-                        ) {
-                            Box(modifier = Modifier.fillMaxSize().padding(14.dp)) {
-                                Text(
-                                    stringResource(com.vibe.core.ui.R.string.home_mix_prefix, index + 1),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                playlist.name,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                stringResource(R.string.library_tracks_count, playlist.totalTracks),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
                         }
                     }
                 }
