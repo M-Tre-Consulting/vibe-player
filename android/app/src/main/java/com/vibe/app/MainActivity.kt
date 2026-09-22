@@ -24,6 +24,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -653,19 +654,33 @@ class MainActivity : ComponentActivity() {
                                  }
                              }
 
-                            // Full Player Screen Modal - positioned above AnimatedContent so dismissal reveals what's underneath
+                            // Full Player Screen Modal - shrinks and minimizes down into the mini player bar position on dismissal
                             BackHandler(enabled = isFullPlayerVisible) { isFullPlayerVisible = false }
                             AnimatedVisibility(
                                 visible = isFullPlayerVisible,
                                 enter = slideInVertically(
-                                    initialOffsetY = { it },
+                                    initialOffsetY = { (it * 0.8f).toInt() },
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioLowBouncy,
+                                        stiffness = Spring.StiffnessMediumLow
+                                    )
+                                ) + scaleIn(
+                                    initialScale = 0.82f,
+                                    transformOrigin = TransformOrigin(0.5f, 0.95f),
                                     animationSpec = spring(
                                         dampingRatio = Spring.DampingRatioLowBouncy,
                                         stiffness = Spring.StiffnessMediumLow
                                     )
                                 ) + fadeIn(animationSpec = androidx.compose.animation.core.tween(250)),
                                 exit = slideOutVertically(
-                                    targetOffsetY = { it },
+                                    targetOffsetY = { (it * 0.8f).toInt() },
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                        stiffness = Spring.StiffnessMedium
+                                    )
+                                ) + scaleOut(
+                                    targetScale = 0.82f,
+                                    transformOrigin = TransformOrigin(0.5f, 0.95f),
                                     animationSpec = spring(
                                         dampingRatio = Spring.DampingRatioNoBouncy,
                                         stiffness = Spring.StiffnessMedium

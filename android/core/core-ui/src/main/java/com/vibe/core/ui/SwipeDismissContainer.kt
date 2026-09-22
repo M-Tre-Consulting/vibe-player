@@ -13,15 +13,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /**
- * Interactive vertical swipe-to-dismiss gesture container.
- * Smoothly translates and fades the screen content on downward swipe,
- * animating fluidly on release and dispatching [onDismiss].
+ * Interactive vertical swipe-to-dismiss gesture container that smoothly shrinks
+ * and minimizes content down towards the bottom mini-player anchor on downward swipe.
  */
 @Composable
 fun SwipeDismissContainer(
@@ -50,17 +50,22 @@ fun SwipeDismissContainer(
         modifier = modifier
             .offset { IntOffset(0, offsetY.value.roundToInt()) }
             .graphicsLayer {
-                alpha = (1f - (offsetY.value / 1000f)).coerceIn(0f, 1f)
+                val progress = (offsetY.value / 1000f).coerceIn(0f, 1f)
+                alpha = 1f - progress
+                val scale = (1f - progress * 0.25f).coerceIn(0.75f, 1f)
+                scaleX = scale
+                scaleY = scale
+                transformOrigin = TransformOrigin(0.5f, 0.95f)
             }
             .draggable(
                 state = draggableState,
                 orientation = Orientation.Vertical,
                 enabled = enabled,
                 onDragStopped = { velocity ->
-                    if (offsetY.value > 200f || velocity > 600f) {
+                    if (offsetY.value > 180f || velocity > 500f) {
                         coroutineScope.launch {
                             offsetY.animateTo(
-                                targetValue = 1600f,
+                                targetValue = 1200f,
                                 animationSpec = spring(stiffness = Spring.StiffnessMedium)
                             )
                             onDismiss()
