@@ -121,8 +121,8 @@ class RoutingAudioPlayerImpl(
                     }
 
                     // Check if track ended naturally (playback stopped at/near end of track)
-                    val nearEnd = dur > 0L && pos >= (dur - 2500L)
-                    val stoppedAtEnd = wasPlaying && isPaused && !isPlaying && (nearEnd || (pos == 0L && dur > 0L))
+                    val nearEnd = dur > 0L && (pos >= (dur - 10000L) || pos == 0L)
+                    val stoppedAtEnd = wasPlaying && isPaused && !isPlaying && nearEnd
                     if (stoppedAtEnd && !isPausedByUser) {
                         if (queueManager.hasUpcoming()) {
                             Log.i(TAG, "Track ended in Spotify Remote. Auto-advancing to next track in Vibe queue.")

@@ -29,15 +29,16 @@ class QueueManager {
     }
 
     fun setContextQueue(currentTrack: Track, contextTracks: List<Track>, contextName: String? = null) {
+        val cleanCurrentId = currentTrack.id.substringAfterLast(":")
         val upcoming = if (contextTracks.isNotEmpty()) {
-            val index = contextTracks.indexOfFirst { it.id == currentTrack.id }
-            if (index != -1) contextTracks.drop(index + 1) else contextTracks.filterNot { it.id == currentTrack.id }
+            val index = contextTracks.indexOfFirst { it.id.substringAfterLast(":") == cleanCurrentId }
+            if (index != -1) contextTracks.drop(index + 1) else contextTracks.filterNot { it.id.substringAfterLast(":") == cleanCurrentId }
         } else emptyList()
 
         originalContextQueue = upcoming
 
         val prevPlaying = _queue.value.currentlyPlaying
-        val history = if (prevPlaying != null && prevPlaying.id != currentTrack.id) {
+        val history = if (prevPlaying != null && prevPlaying.id.substringAfterLast(":") != cleanCurrentId) {
             listOf(PlayedTrackRecord(prevPlaying)) + _queue.value.recentHistory.take(19)
         } else _queue.value.recentHistory
 
@@ -84,8 +85,8 @@ class QueueManager {
 
     fun removeTrack(track: Track) {
         _queue.update { q ->
-            val uFiltered = q.userQueue.filterNot { it.id == track.id }
-            val cFiltered = q.contextQueue.filterNot { it.id == track.id }
+            val uFiltered = q.userQueue.filterNot { it.id.substringAfterLast(":") == track.id.substringAfterLast(":") }
+            val cFiltered = q.contextQueue.filterNot { it.id.substringAfterLast(":") == track.id.substringAfterLast(":") }
             Log.i(TAG, "Removed '${track.name}' from queue")
             q.copy(userQueue = uFiltered, contextQueue = cFiltered)
         }
@@ -117,8 +118,9 @@ class QueueManager {
             listOf(PlayedTrackRecord(current)) + q.recentHistory.take(19)
         } else q.recentHistory
 
-        val newUserQueue = if (nextTrack.id == q.userQueue.firstOrNull()?.id) q.userQueue.drop(1) else q.userQueue
-        val newContextQueue = if (nextTrack.id == q.contextQueue.firstOrNull()?.id) q.contextQueue.drop(1) else q.contextQueue
+        val nextCleanId = nextTrack.id.substringAfterLast(":")
+        val newUserQueue = if (q.userQueue.firstOrNull()?.id?.substringAfterLast(":") == nextCleanId) q.userQueue.drop(1) else q.userQueue
+        val newContextQueue = if (q.contextQueue.firstOrNull()?.id?.substringAfterLast(":") == nextCleanId) q.contextQueue.drop(1) else q.contextQueue
 
         _queue.value = q.copy(
             currentlyPlaying = nextTrack,
@@ -150,14 +152,15 @@ class QueueManager {
     fun playTrackFromQueue(track: Track) {
         val q = _queue.value
         val current = q.currentlyPlaying
-        val history = if (current != null && current.id != track.id) {
+        val history = if (current != null && current.id.substringAfterLast(":") != track.id.substringAfterLast(":")) {
             listOf(PlayedTrackRecord(current)) + q.recentHistory.take(19)
         } else q.recentHistory
 
+        val cleanId = track.id.substringAfterLast(":")
         _queue.value = q.copy(
             currentlyPlaying = track,
-            userQueue = q.userQueue.filterNot { it.id == track.id },
-            contextQueue = q.contextQueue.filterNot { it.id == track.id },
+            userQueue = q.userQueue.filterNot { it.id.substringAfterLast(":") == cleanId },
+            contextQueue = q.contextQueue.filterNot { it.id.substringAfterLast(":") == cleanId },
             recentHistory = history
         )
         Log.i(TAG, "playTrackFromQueue: '${track.name}'")
@@ -172,7 +175,7 @@ class QueueManager {
                 q.copy(contextQueue = q.contextQueue.shuffled())
             } else {
                 if (originalContextQueue.isNotEmpty()) {
-                    val restored = originalContextQueue.filter { orig -> q.contextQueue.any { it.id == orig.id } }
+                    val restored = originalContextQueue.filter { orig -> q.contextQueue.any { it.id.substringAfterLast(":") == orig.id.substringAfterLast(":") } }
                     originalContextQueue = emptyList()
                     q.copy(contextQueue = restored)
                 } else q
