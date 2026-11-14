@@ -239,7 +239,7 @@ class Media3AudioPlayerImpl(
         try {
             val intent = Intent().setClassName(
                 context.packageName,
-                "com.vibe.app.playback.VibeMediaSessionService"
+                "it.mtreconsulting.vibeplayer.playback.VibeMediaSessionService"
             )
             // Start the service normally. MediaSessionService handles entering foreground
             // safely with its internal MediaNotificationManager without hitting the 30s timeout.

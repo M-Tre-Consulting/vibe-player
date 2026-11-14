@@ -1,4 +1,4 @@
-package com.vibe.app
+package it.mtreconsulting.vibeplayer
 
 import android.app.Application
 import com.vibe.core.connect.ConnectDeviceManager

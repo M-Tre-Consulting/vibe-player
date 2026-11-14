@@ -1,4 +1,4 @@
-package com.vibe.app
+package it.mtreconsulting.vibeplayer
 
 import android.content.Intent
 import android.net.Uri

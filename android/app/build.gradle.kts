@@ -41,11 +41,11 @@ abstract class GitValueSource : ValueSource<String, GitValueSource.Parameters> {
 }
 
 android {
-    namespace = "com.vibe.app"
+    namespace = "it.mtreconsulting.vibeplayer"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.vibe.app"
+        applicationId = "it.mtreconsulting.vibeplayer"
         minSdk = 26
         targetSdk = 34
 

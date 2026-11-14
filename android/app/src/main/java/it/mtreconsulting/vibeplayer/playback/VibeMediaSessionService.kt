@@ -1,4 +1,4 @@
-package com.vibe.app.playback
+package it.mtreconsulting.vibeplayer.playback
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
