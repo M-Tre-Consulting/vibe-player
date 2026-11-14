@@ -1,18 +1,24 @@
 package com.vibe.core.ui
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntOffset
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -31,6 +37,7 @@ fun SwipeBackContainer(
 ) {
     val coroutineScope = rememberCoroutineScope()
     val offsetX = remember { Animatable(0f) }
+    var containerWidthPx by remember { mutableIntStateOf(0) }
 
     val draggableState = rememberDraggableState { delta ->
         if (enabled) {
@@ -41,22 +48,28 @@ fun SwipeBackContainer(
         }
     }
 
+    val dismissDistance = if (containerWidthPx > 0) containerWidthPx.toFloat() else 1200f
+
     Box(
         modifier = modifier
+            .onSizeChanged { containerWidthPx = it.width }
             .offset { IntOffset(offsetX.value.roundToInt(), 0) }
             .graphicsLayer {
-                alpha = (1f - (offsetX.value / 1200f)).coerceIn(0.5f, 1f)
+                alpha = (1f - (offsetX.value / dismissDistance) * 0.35f).coerceIn(0.65f, 1f)
             }
             .draggable(
                 state = draggableState,
                 orientation = Orientation.Horizontal,
                 enabled = enabled,
                 onDragStopped = { velocity ->
-                    if (offsetX.value > 250f || velocity > 1000f) {
+                    if (offsetX.value > dismissDistance * 0.25f || velocity > 800f) {
                         coroutineScope.launch {
                             offsetX.animateTo(
-                                targetValue = 1200f,
-                                animationSpec = spring(stiffness = Spring.StiffnessMedium)
+                                targetValue = dismissDistance,
+                                animationSpec = tween(
+                                    durationMillis = 180,
+                                    easing = FastOutLinearInEasing
+                                )
                             )
                             onBack()
                         }
@@ -65,7 +78,7 @@ fun SwipeBackContainer(
                             offsetX.animateTo(
                                 targetValue = 0f,
                                 animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
                                     stiffness = Spring.StiffnessMediumLow
                                 )
                             )

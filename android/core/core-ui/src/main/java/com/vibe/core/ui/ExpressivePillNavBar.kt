@@ -72,13 +72,19 @@ fun ExpressivePillNavBar(
 
                     val bgColor by animateColorAsState(
                         targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        ),
                         label = "pillBgColor"
                     )
 
                     val contentColor by animateColorAsState(
                         targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        ),
                         label = "pillContentColor"
                     )
 
@@ -105,8 +111,22 @@ fun ExpressivePillNavBar(
                         )
                         AnimatedVisibility(
                             visible = isSelected,
-                            enter = fadeIn() + expandHorizontally(),
-                            exit = fadeOut() + shrinkHorizontally()
+                            enter = fadeIn(
+                                animationSpec = spring(stiffness = Spring.StiffnessMedium)
+                            ) + expandHorizontally(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMedium
+                                )
+                            ),
+                            exit = fadeOut(
+                                animationSpec = spring(stiffness = Spring.StiffnessMedium)
+                            ) + shrinkHorizontally(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMedium
+                                )
+                            )
                         ) {
                             Row {
                                 Spacer(modifier = Modifier.width(8.dp))

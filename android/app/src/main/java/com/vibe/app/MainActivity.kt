@@ -26,6 +26,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -37,7 +38,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import com.vibe.core.connect.ConnectDeviceManager
@@ -302,102 +306,89 @@ class MainActivity : ComponentActivity() {
                                 Scaffold(
                                 bottomBar = {
                                     val isAnyModalVisible = isFullPlayerVisible || isQueueVisible || isLyricsVisible || isSettingsDialogVisible || isDevicesDialogVisible || selectedTrackForOptions != null
-                                    AnimatedVisibility(
-                                        visible = !isAnyModalVisible,
-                                        enter = slideInVertically(
-                                            initialOffsetY = { it / 2 },
-                                            animationSpec = spring(
-                                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                                stiffness = Spring.StiffnessMediumLow
-                                            )
-                                        ) + scaleIn(
-                                            initialScale = 0.92f,
-                                            transformOrigin = TransformOrigin(0.5f, 0.5f),
-                                            animationSpec = spring(
-                                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                                stiffness = Spring.StiffnessMediumLow
-                                            )
-                                        ) + fadeIn(animationSpec = tween(220)),
-                                        exit = slideOutVertically(
-                                            targetOffsetY = { it / 2 },
-                                            animationSpec = spring(
-                                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                                stiffness = Spring.StiffnessMedium
-                                            )
-                                        ) + scaleOut(
-                                            targetScale = 0.92f,
-                                            transformOrigin = TransformOrigin(0.5f, 0.5f),
-                                            animationSpec = spring(
-                                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                                stiffness = Spring.StiffnessMedium
-                                            )
-                                        ) + fadeOut(animationSpec = tween(180))
+                                    val bottomBarProgress by animateFloatAsState(
+                                        targetValue = if (isAnyModalVisible) 0f else 1f,
+                                        animationSpec = tween(
+                                            durationMillis = if (isAnyModalVisible) 200 else 280,
+                                            easing = FastOutSlowInEasing
+                                        ),
+                                        label = "bottomBarVisibility"
+                                    )
+                                    // Keep layout height stable so innerPadding never thrashes during modal transitions
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .navigationBarsPadding()
+                                            .graphicsLayer {
+                                                alpha = bottomBarProgress
+                                                translationY = (1f - bottomBarProgress) * 120f
+                                            },
+                                        horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
-                                        Column(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .navigationBarsPadding(),
-                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        // Mini Player Bar docked above Navigation Bar
+                                        AnimatedVisibility(
+                                            visible = playbackState.currentTrack != null,
+                                            enter = slideInVertically(
+                                                initialOffsetY = { it },
+                                                animationSpec = tween(260, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f))
+                                            ) + fadeIn(tween(200)),
+                                            exit = slideOutVertically(
+                                                targetOffsetY = { it },
+                                                animationSpec = tween(200, easing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f))
+                                            ) + fadeOut(tween(180))
                                         ) {
-                                            // Mini Player Bar docked above Navigation Bar
-                                            AnimatedVisibility(
-                                                visible = playbackState.currentTrack != null,
-                                                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                                                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
-                                            ) {
-                                                MiniPlayerBar(
-                                                    playbackState = playbackState,
-                                                    isLiked = playbackState.currentTrack?.let { ct ->
-                                                        val cleanId = ct.id.substringAfterLast(":")
-                                                        userLikedTracks.any { it.id.substringAfterLast(":") == cleanId }
-                                                    } ?: false,
-                                                    onPlayPause = {
-                                                        if (playbackState.isPlaying) audioPlayer.pause()
-                                                        else audioPlayer.resume()
-                                                    },
-                                                    onSkipNext = { audioPlayer.skipToNext() },
-                                                    onBarClick = { isFullPlayerVisible = true },
-                                                    onArtistClick = {
-                                                        playbackState.currentTrack?.artists?.firstOrNull()?.id?.let { artistId ->
-                                                            lifecycleScope.launch {
-                                                                apiService.getArtist(artistId).onSuccess { activeArtist = it }
-                                                            }
+                                            MiniPlayerBar(
+                                                playbackState = playbackState,
+                                                isLiked = playbackState.currentTrack?.let { ct ->
+                                                    val cleanId = ct.id.substringAfterLast(":")
+                                                    userLikedTracks.any { it.id.substringAfterLast(":") == cleanId }
+                                                } ?: false,
+                                                onPlayPause = {
+                                                    if (playbackState.isPlaying) audioPlayer.pause()
+                                                    else audioPlayer.resume()
+                                                },
+                                                onSkipNext = { audioPlayer.skipToNext() },
+                                                onBarClick = { isFullPlayerVisible = true },
+                                                onArtistClick = {
+                                                    playbackState.currentTrack?.artists?.firstOrNull()?.id?.let { artistId ->
+                                                        lifecycleScope.launch {
+                                                            apiService.getArtist(artistId).onSuccess { activeArtist = it }
                                                         }
-                                                    },
-                                                    onToggleLike = {
-                                                        playbackState.currentTrack?.let { toggleTrackLike(it) }
                                                     }
-                                                )
-                                            }
-
-                                            // Material 3 Expressive Floating Pill Navbar
-                                            ExpressivePillNavBar(
-                                                items = listOf(
-                                                    ExpressiveNavItem(
-                                                        id = "home",
-                                                        label = androidx.compose.ui.res.stringResource(com.vibe.core.ui.R.string.nav_home),
-                                                        icon = Icons.Default.Home
-                                                    ),
-                                                    ExpressiveNavItem(
-                                                        id = "search",
-                                                        label = androidx.compose.ui.res.stringResource(com.vibe.core.ui.R.string.nav_search),
-                                                        icon = Icons.Default.Search
-                                                    ),
-                                                    ExpressiveNavItem(
-                                                        id = "library",
-                                                        label = androidx.compose.ui.res.stringResource(com.vibe.core.ui.R.string.nav_library),
-                                                        icon = Icons.Default.LibraryMusic
-                                                    )
-                                                ),
-                                                selectedItemId = if (activeArtist == null && activeAlbum == null && activePlaylist == null) currentScreen else "",
-                                                onItemSelected = { selected ->
-                                                    activeArtist = null
-                                                    activeAlbum = null
-                                                    activePlaylist = null
-                                                    currentScreen = selected
+                                                },
+                                                onToggleLike = {
+                                                    playbackState.currentTrack?.let { toggleTrackLike(it) }
                                                 }
                                             )
                                         }
+
+                                        // Material 3 Expressive Floating Pill Navbar
+                                        ExpressivePillNavBar(
+                                            items = listOf(
+                                                ExpressiveNavItem(
+                                                    id = "home",
+                                                    label = androidx.compose.ui.res.stringResource(com.vibe.core.ui.R.string.nav_home),
+                                                    icon = Icons.Default.Home
+                                                ),
+                                                ExpressiveNavItem(
+                                                    id = "search",
+                                                    label = androidx.compose.ui.res.stringResource(com.vibe.core.ui.R.string.nav_search),
+                                                    icon = Icons.Default.Search
+                                                ),
+                                                ExpressiveNavItem(
+                                                    id = "library",
+                                                    label = androidx.compose.ui.res.stringResource(com.vibe.core.ui.R.string.nav_library),
+                                                    icon = Icons.Default.LibraryMusic
+                                                )
+                                            ),
+                                            selectedItemId = if (activeArtist == null && activeAlbum == null && activePlaylist == null) currentScreen else "",
+                                            onItemSelected = { selected ->
+                                                activeArtist = null
+                                                activeAlbum = null
+                                                activePlaylist = null
+                                                currentScreen = selected
+                                            }
+                                        )
                                     }
                                 }
                             ) { innerPadding ->
@@ -421,28 +412,33 @@ class MainActivity : ComponentActivity() {
                                             val isExitingDetail = initialState in listOf("playlist", "album", "artist") &&
                                                     targetState !in listOf("playlist", "album", "artist")
 
+                                            val emphasizedDecelerate = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
+                                            val emphasizedAccelerate = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
                                             if (isEnteringDetail) {
                                                 (slideInHorizontally(
-                                                    initialOffsetX = { it / 2 },
-                                                    animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
-                                                ) + fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + scaleIn(initialScale = 0.94f))
+                                                    initialOffsetX = { (it * 0.25f).toInt() },
+                                                    animationSpec = tween(300, easing = emphasizedDecelerate)
+                                                ) + fadeIn(animationSpec = tween(240, easing = FastOutSlowInEasing)))
                                                     .togetherWith(
-                                                        slideOutHorizontally(targetOffsetX = { -it / 4 }) + fadeOut()
+                                                        slideOutHorizontally(
+                                                            targetOffsetX = { -(it * 0.15f).toInt() },
+                                                            animationSpec = tween(300, easing = emphasizedDecelerate)
+                                                        ) + fadeOut(animationSpec = tween(180))
                                                     )
                                             } else if (isExitingDetail) {
                                                 (slideInHorizontally(
-                                                    initialOffsetX = { -it / 4 },
-                                                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
-                                                ) + fadeIn() + scaleIn(initialScale = 0.96f))
+                                                    initialOffsetX = { -(it * 0.15f).toInt() },
+                                                    animationSpec = tween(280, easing = emphasizedDecelerate)
+                                                ) + fadeIn(animationSpec = tween(220)))
                                                     .togetherWith(
                                                         slideOutHorizontally(
                                                             targetOffsetX = { it },
-                                                            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
-                                                        ) + fadeOut()
+                                                            animationSpec = tween(260, easing = emphasizedAccelerate)
+                                                        ) + fadeOut(animationSpec = tween(200))
                                                     )
                                             } else {
-                                                fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow))
-                                                    .togetherWith(fadeOut(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)))
+                                                fadeIn(animationSpec = tween(200, easing = FastOutSlowInEasing))
+                                                    .togetherWith(fadeOut(animationSpec = tween(160, easing = FastOutSlowInEasing)))
                                             }
                                         },
                                         label = "navigationTransition"
@@ -683,38 +679,24 @@ class MainActivity : ComponentActivity() {
                                  }
                              }
 
-                            // Full Player Screen Modal - shrinks and collapses directly into the floating mini player pill
+                            // Full Player Screen Modal
                             BackHandler(enabled = isFullPlayerVisible) { isFullPlayerVisible = false }
                             AnimatedVisibility(
                                 visible = isFullPlayerVisible,
                                 enter = slideInVertically(
-                                    initialOffsetY = { (it * 0.35f).toInt() },
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioLowBouncy,
-                                        stiffness = Spring.StiffnessMediumLow
-                                    )
-                                ) + scaleIn(
-                                    initialScale = 0.22f,
-                                    transformOrigin = TransformOrigin(0.5f, 0.88f),
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioLowBouncy,
-                                        stiffness = Spring.StiffnessMediumLow
+                                    initialOffsetY = { it },
+                                    animationSpec = tween(
+                                        durationMillis = 360,
+                                        easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
                                     )
                                 ) + fadeIn(animationSpec = tween(220)),
                                 exit = slideOutVertically(
-                                    targetOffsetY = { (it * 0.35f).toInt() },
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioNoBouncy,
-                                        stiffness = Spring.StiffnessMedium
+                                    targetOffsetY = { it },
+                                    animationSpec = tween(
+                                        durationMillis = 280,
+                                        easing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
                                     )
-                                ) + scaleOut(
-                                    targetScale = 0.22f,
-                                    transformOrigin = TransformOrigin(0.5f, 0.88f),
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioNoBouncy,
-                                        stiffness = Spring.StiffnessMedium
-                                    )
-                                ) + fadeOut(animationSpec = tween(180))
+                                ) + fadeOut(animationSpec = tween(240))
                             ) {
                                 SwipeDismissContainer(
                                     onDismiss = { isFullPlayerVisible = false }
@@ -774,30 +756,30 @@ class MainActivity : ComponentActivity() {
                                 visible = isLyricsVisible,
                                 enter = slideInVertically(
                                     initialOffsetY = { it },
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioLowBouncy,
-                                        stiffness = Spring.StiffnessMediumLow
+                                    animationSpec = tween(
+                                        durationMillis = 340,
+                                        easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
                                     )
-                                ) + fadeIn(animationSpec = androidx.compose.animation.core.tween(250)),
+                                ) + fadeIn(animationSpec = tween(220)),
                                 exit = slideOutVertically(
                                     targetOffsetY = { it },
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioNoBouncy,
-                                        stiffness = Spring.StiffnessMedium
+                                    animationSpec = tween(
+                                        durationMillis = 260,
+                                        easing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
                                     )
-                                ) + fadeOut(animationSpec = androidx.compose.animation.core.tween(200))
+                                ) + fadeOut(animationSpec = tween(220))
                             ) {
                                 BackHandler { isLyricsVisible = false }
                                 Surface(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .statusBarsPadding()
-                                        .navigationBarsPadding(),
+                                    modifier = Modifier.fillMaxSize(),
                                     color = MaterialTheme.colorScheme.background
                                 ) {
                                     LyricsScreen(
                                         lyrics = currentLyrics,
                                         currentPositionMs = playbackState.positionMs,
+                                        modifier = Modifier
+                                            .statusBarsPadding()
+                                            .navigationBarsPadding(),
                                         isLoading = isLoadingLyrics,
                                         trackName = playbackState.currentTrack?.name,
                                         artistName = playbackState.currentTrack?.artists?.firstOrNull()?.name,
@@ -814,29 +796,29 @@ class MainActivity : ComponentActivity() {
                                 visible = isQueueVisible,
                                 enter = slideInVertically(
                                     initialOffsetY = { it },
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioLowBouncy,
-                                        stiffness = Spring.StiffnessMediumLow
+                                    animationSpec = tween(
+                                        durationMillis = 340,
+                                        easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
                                     )
-                                ) + fadeIn(animationSpec = androidx.compose.animation.core.tween(250)),
+                                ) + fadeIn(animationSpec = tween(220)),
                                 exit = slideOutVertically(
                                     targetOffsetY = { it },
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioNoBouncy,
-                                        stiffness = Spring.StiffnessMedium
+                                    animationSpec = tween(
+                                        durationMillis = 260,
+                                        easing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
                                     )
-                                ) + fadeOut(animationSpec = androidx.compose.animation.core.tween(200))
+                                ) + fadeOut(animationSpec = tween(220))
                             ) {
                                 BackHandler { isQueueVisible = false }
                                 Surface(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .statusBarsPadding()
-                                        .navigationBarsPadding(),
+                                    modifier = Modifier.fillMaxSize(),
                                     color = MaterialTheme.colorScheme.background
                                 ) {
                                     QueueScreen(
                                         queue = currentQueue,
+                                        modifier = Modifier
+                                            .statusBarsPadding()
+                                            .navigationBarsPadding(),
                                         onClose = { isQueueVisible = false },
                                         onTrackClick = { track ->
                                             audioPlayer.playQueueItem(track)
@@ -1280,6 +1262,7 @@ fun LoginScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .systemBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp, vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

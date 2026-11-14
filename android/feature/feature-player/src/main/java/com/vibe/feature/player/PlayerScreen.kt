@@ -1,6 +1,7 @@
 package com.vibe.feature.player
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
@@ -286,20 +287,13 @@ fun FullPlayerScreen(
     }
 
     BoxWithConstraints(
-        modifier = modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .padding(horizontal = 6.dp, vertical = 6.dp)
+        modifier = modifier.fillMaxSize()
     ) {
         val isLandscape = this.maxWidth > this.maxHeight
 
         Surface(
             modifier = Modifier.fillMaxSize(),
-            shape = RoundedCornerShape(36.dp),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 12.dp,
-            shadowElevation = 16.dp
+            color = MaterialTheme.colorScheme.surface
         ) {
             Box(
                 modifier = Modifier
@@ -319,6 +313,8 @@ fun FullPlayerScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
+                            .statusBarsPadding()
+                            .navigationBarsPadding()
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -460,6 +456,8 @@ fun FullPlayerScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
+                            .statusBarsPadding()
+                            .navigationBarsPadding()
                             .padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.SpaceBetween
@@ -683,14 +681,14 @@ private fun PlayerArtwork(
     AnimatedContent(
         targetState = imageUrl to trackId,
         transitionSpec = {
-            (fadeIn(animationSpec = tween(400)) + scaleIn(
-                initialScale = 0.90f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                )
+            (fadeIn(animationSpec = tween(280, easing = FastOutSlowInEasing)) + scaleIn(
+                initialScale = 0.94f,
+                animationSpec = tween(300, easing = FastOutSlowInEasing)
             )).togetherWith(
-                fadeOut(animationSpec = tween(250)) + scaleOut(targetScale = 1.05f)
+                fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing)) + scaleOut(
+                    targetScale = 1.03f,
+                    animationSpec = tween(200, easing = FastOutSlowInEasing)
+                )
             )
         },
         label = "FullPlayerArtwork"
@@ -877,7 +875,7 @@ private fun PlayerControlsRow(
         val prevPressed by prevInteraction.collectIsPressedAsState()
         val prevScale by animateFloatAsState(
             targetValue = if (prevPressed) 0.92f else 1f,
-            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
             label = "prevScale"
         )
         Surface(
@@ -905,7 +903,7 @@ private fun PlayerControlsRow(
         val playPressed by playInteraction.collectIsPressedAsState()
         val playScale by animateFloatAsState(
             targetValue = if (playPressed) 0.92f else 1f,
-            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
             label = "playScale"
         )
         Surface(
@@ -936,7 +934,7 @@ private fun PlayerControlsRow(
         val nextPressed by nextInteraction.collectIsPressedAsState()
         val nextScale by animateFloatAsState(
             targetValue = if (nextPressed) 0.92f else 1f,
-            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
             label = "nextScale"
         )
         Surface(
