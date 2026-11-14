@@ -1,6 +1,7 @@
 package com.vibe.feature.player
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -16,6 +17,9 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
@@ -32,6 +36,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.launch
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -369,6 +375,8 @@ fun FullPlayerScreen(
                                     imageUrl = track.album.imageUrl,
                                     trackId = track.id,
                                     albumName = track.album.name,
+                                    onSwipeNext = onSkipNext,
+                                    onSwipePrevious = onSkipPrevious,
                                     modifier = Modifier.size(artSize)
                                 )
                             }
@@ -498,6 +506,8 @@ fun FullPlayerScreen(
                                 imageUrl = track.album.imageUrl,
                                 trackId = track.id,
                                 albumName = track.album.name,
+                                onSwipeNext = onSkipNext,
+                                onSwipePrevious = onSkipPrevious,
                                 modifier = Modifier.size(artSize)
                             )
                         }
@@ -676,10 +686,49 @@ private fun PlayerArtwork(
     imageUrl: String?,
     trackId: String,
     albumName: String,
+    onSwipeNext: () -> Unit = {},
+    onSwipePrevious: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val coroutineScope = rememberCoroutineScope()
+    val offsetX = remember { Animatable(0f) }
+
+    val draggableState = rememberDraggableState { delta ->
+        coroutineScope.launch {
+            offsetX.snapTo(offsetX.value + delta)
+        }
+    }
+
     AnimatedContent(
         targetState = imageUrl to trackId,
+        modifier = modifier
+            .graphicsLayer {
+                translationX = offsetX.value
+                rotationZ = (offsetX.value / 45f).coerceIn(-5f, 5f)
+            }
+            .draggable(
+                state = draggableState,
+                orientation = Orientation.Horizontal,
+                onDragStopped = { velocity ->
+                    when {
+                        offsetX.value < -120f || velocity < -600f -> {
+                            onSwipeNext()
+                        }
+                        offsetX.value > 120f || velocity > 600f -> {
+                            onSwipePrevious()
+                        }
+                    }
+                    coroutineScope.launch {
+                        offsetX.animateTo(
+                            targetValue = 0f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessMedium
+                            )
+                        )
+                    }
+                }
+            ),
         transitionSpec = {
             (fadeIn(animationSpec = tween(280, easing = FastOutSlowInEasing)) + scaleIn(
                 initialScale = 0.94f,
@@ -694,7 +743,7 @@ private fun PlayerArtwork(
         label = "FullPlayerArtwork"
     ) { (coverArt, _) ->
         Card(
-            modifier = modifier.aspectRatio(1f),
+            modifier = Modifier.fillMaxSize().aspectRatio(1f),
             shape = RoundedCornerShape(24.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 10.dp)
         ) {

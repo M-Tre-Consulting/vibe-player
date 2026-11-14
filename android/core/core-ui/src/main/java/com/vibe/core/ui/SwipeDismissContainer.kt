@@ -1,10 +1,8 @@
 package com.vibe.core.ui
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -79,9 +77,11 @@ fun SwipeDismissContainer(
                         coroutineScope.launch {
                             offsetY.animateTo(
                                 targetValue = dismissDistance,
-                                animationSpec = tween(
-                                    durationMillis = 200,
-                                    easing = FastOutLinearInEasing
+                                initialVelocity = velocity,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMedium,
+                                    visibilityThreshold = 4f
                                 )
                             )
                             onDismiss()
@@ -90,6 +90,7 @@ fun SwipeDismissContainer(
                         coroutineScope.launch {
                             offsetY.animateTo(
                                 targetValue = 0f,
+                                initialVelocity = velocity,
                                 animationSpec = spring(
                                     dampingRatio = Spring.DampingRatioNoBouncy,
                                     stiffness = Spring.StiffnessMediumLow
