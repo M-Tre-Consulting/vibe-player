@@ -61,6 +61,10 @@ class RoutingAudioPlayerImpl(
     override val queue: StateFlow<com.vibe.core.model.Queue> = queueManager.queue
 
     private var isPausedByUser = false
+    @Volatile
+    private var pendingTrackId: String? = null
+    @Volatile
+    private var pendingTrackTimestampMs: Long = 0L
 
     val mediaSession: MediaSession
         get() = exoPlayer.mediaSession
@@ -90,27 +94,38 @@ class RoutingAudioPlayerImpl(
 
         // Collect updates from Spotify App Remote
         scope.launch {
-            var lastTrackId: String? = null
+            var lastTrackCleanId: String? = null
             var wasPlaying = false
+            var lastKnownPos = 0L
 
             spotifyRemote.playbackState.collect { state ->
                 if (activeEngine == ActiveEngine.SPOTIFY_REMOTE) {
                     _playbackState.value = state
 
                     val currentTrack = state.currentTrack
+                    val currentCleanId = currentTrack?.id?.substringAfterLast(":")
                     val isPlaying = state.isPlaying
                     val isPaused = state.isPaused
                     val pos = state.positionMs
                     val dur = state.durationMs
 
-                    // Check if current track changed unexpectedly in Spotify
-                    if (currentTrack != null && currentTrack.id != lastTrackId) {
-                        lastTrackId = currentTrack.id
+                    val pendingId = pendingTrackId
+                    val isTransitioning = pendingId != null &&
+                        (System.currentTimeMillis() - pendingTrackTimestampMs) < 3000L
 
-                        val activePlaying = queueManager.queue.value.currentlyPlaying
-                        if (activePlaying != null && currentTrack.id != activePlaying.id) {
+                    if (pendingId != null && currentCleanId == pendingId && isPlaying) {
+                        pendingTrackId = null
+                    }
+
+                    // Check if current track changed unexpectedly in Spotify
+                    if (!isTransitioning && currentCleanId != null && currentCleanId != lastTrackCleanId) {
+                        lastTrackCleanId = currentCleanId
+
+                        val activePlayingCleanId = queueManager.queue.value.currentlyPlaying?.id?.substringAfterLast(":")
+                        if (activePlayingCleanId != null && currentCleanId != activePlayingCleanId) {
                             val expectedNext = queueManager.peekNext()
-                            if (expectedNext != null && currentTrack.id == expectedNext.id) {
+                            val expectedNextCleanId = expectedNext?.id?.substringAfterLast(":")
+                            if (expectedNext != null && currentCleanId == expectedNextCleanId) {
                                 Log.i(TAG, "Spotify Remote transitioned naturally to '${currentTrack.name}'. Advancing Vibe queue.")
                                 queueManager.advanceToNext()
                             } else if (expectedNext != null) {
@@ -118,18 +133,23 @@ class RoutingAudioPlayerImpl(
                                 skipToNext()
                             }
                         }
+                    } else if (currentCleanId != null) {
+                        lastTrackCleanId = currentCleanId
                     }
 
                     // Check if track ended naturally (playback stopped at/near end of track)
-                    val nearEnd = dur > 0L && (pos >= (dur - 10000L) || pos == 0L)
+                    val nearEnd = dur > 0L && (pos >= (dur - 10_000L) || (pos == 0L && lastKnownPos >= (dur - 10_000L)))
                     val stoppedAtEnd = wasPlaying && isPaused && !isPlaying && nearEnd
-                    if (stoppedAtEnd && !isPausedByUser) {
+                    if (!isTransitioning && stoppedAtEnd && !isPausedByUser) {
                         if (queueManager.hasUpcoming()) {
                             Log.i(TAG, "Track ended in Spotify Remote. Auto-advancing to next track in Vibe queue.")
                             skipToNext()
                         }
                     }
 
+                    if (pos > 0L) {
+                        lastKnownPos = pos
+                    }
                     wasPlaying = isPlaying
                 }
             }
@@ -188,6 +208,8 @@ class RoutingAudioPlayerImpl(
 
     private fun playTrackInternal(track: Track) {
         isPausedByUser = false
+        pendingTrackId = track.id.substringAfterLast(":")
+        pendingTrackTimestampMs = System.currentTimeMillis()
         scope.launch {
             val settings = settingsManager.settingsFlow.first()
             Log.i(TAG, "playTrackInternal called for '${track.name}' (ActiveEngine: $activeEngine, Mode: ${settings.playbackMode}, AutoFallback: ${settings.autoFallbackEnabled})")
@@ -282,27 +304,59 @@ class RoutingAudioPlayerImpl(
     fun switchToConnect(deviceId: String? = null, transferPlayback: Boolean = false) {
         val prevTrack = _playbackState.value.currentTrack
         val wasPlaying = _playbackState.value.isPlaying
+        val previousEngine = activeEngine
 
         if (deviceId != null) {
             spotifyConnect.targetDeviceId = deviceId
         }
         if (activeEngine != ActiveEngine.CONNECT) {
-            spotifyRemote.pause()
             exoPlayer.pause()
             activeEngine = ActiveEngine.CONNECT
             spotifyConnect.startPolling()
 
-            if (transferPlayback && prevTrack != null && wasPlaying) {
-                spotifyConnect.playTrack(prevTrack, emptyList())
-            } else {
-                scope.launch {
-                    spotifyConnect.syncRemotePlaybackState()
+            scope.launch {
+                val remoteState = spotifyConnect.syncRemotePlaybackState()
+                val remotePlaying = remoteState?.currentTrack != null && remoteState.isPlaying
+
+                if (remoteState?.currentTrack != null) {
+                    _playbackState.value = remoteState
+                    // Sync existing Spotify Connect queue + context metadata without recreating
+                    spotifyConnect.apiService.getUserQueue().onSuccess { remoteQueue ->
+                        val resolvedQueue = if (remoteQueue.currentlyPlaying == null) {
+                            remoteQueue.copy(
+                                currentlyPlaying = remoteState.currentTrack,
+                                contextName = remoteQueue.contextName ?: remoteState.contextTitle
+                            )
+                        } else {
+                            remoteQueue.copy(
+                                contextName = remoteQueue.contextName ?: remoteState.contextTitle
+                            )
+                        }
+                        queueManager.setQueue(resolvedQueue)
+                    }
+                    Log.i(TAG, "Synced existing Spotify Connect session: '${remoteState.currentTrack?.name}' (playing=$remotePlaying, context='${remoteState.contextTitle}')")
+                } else if (transferPlayback && prevTrack != null && wasPlaying) {
+                    if (previousEngine == ActiveEngine.SPOTIFY_REMOTE) {
+                        spotifyRemote.pause()
+                    }
+                    spotifyConnect.playTrack(prevTrack, emptyList())
                 }
             }
         } else {
             spotifyConnect.startPolling()
             scope.launch {
-                spotifyConnect.syncRemotePlaybackState()
+                val remoteState = spotifyConnect.syncRemotePlaybackState()
+                if (remoteState?.currentTrack != null) {
+                    _playbackState.value = remoteState
+                    spotifyConnect.apiService.getUserQueue().onSuccess { remoteQueue ->
+                        queueManager.setQueue(
+                            remoteQueue.copy(
+                                currentlyPlaying = remoteQueue.currentlyPlaying ?: remoteState.currentTrack,
+                                contextName = remoteQueue.contextName ?: remoteState.contextTitle
+                            )
+                        )
+                    }
+                }
             }
         }
     }
@@ -406,11 +460,15 @@ class RoutingAudioPlayerImpl(
             Log.i(TAG, "skipToNext: Advancing to next track in Vibe queue: '${nextTrack.name}'")
             playTrackInternal(nextTrack)
         } else {
-            Log.i(TAG, "skipToNext: Queue is empty, delegating to activeEngine ($activeEngine)")
+            Log.i(TAG, "skipToNext: Queue is empty (activeEngine=$activeEngine)")
             when (activeEngine) {
                 ActiveEngine.SPOTIFY_REMOTE -> spotifyRemote.skipToNext()
                 ActiveEngine.CONNECT -> spotifyConnect.skipToNext()
-                ActiveEngine.EXO_PLAYER -> exoPlayer.skipToNext()
+                ActiveEngine.EXO_PLAYER -> {
+                    // Do not delegate to exoPlayer.skipToNext() when Vibe queue is empty,
+                    // as exoPlayer's single-track playlist with RepeatMode.ALL would repeat the same track infinitely.
+                    exoPlayer.stop()
+                }
             }
         }
     }

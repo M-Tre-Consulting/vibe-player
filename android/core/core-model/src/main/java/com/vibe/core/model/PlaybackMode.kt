@@ -18,5 +18,7 @@ enum class AudioQuality {
 data class VibeSettings(
     val playbackMode: PlaybackMode = PlaybackMode.SPOTIFY_REMOTE,
     val autoFallbackEnabled: Boolean = true,
-    val audioQuality: AudioQuality = AudioQuality.HIGH
+    val audioQuality: AudioQuality = AudioQuality.HIGH,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val useDynamicColors: Boolean = true
 )

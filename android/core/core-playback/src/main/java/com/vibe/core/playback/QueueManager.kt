@@ -23,6 +23,7 @@ class QueueManager {
     val queue: StateFlow<Queue> = _queue.asStateFlow()
 
     private var originalContextQueue: List<Track> = emptyList()
+    private var isShuffleEnabled: Boolean = false
 
     fun setQueue(newQueue: Queue) {
         _queue.value = newQueue
@@ -36,6 +37,7 @@ class QueueManager {
         } else emptyList()
 
         originalContextQueue = upcoming
+        val effectiveUpcoming = if (isShuffleEnabled) upcoming.shuffled() else upcoming
 
         val prevPlaying = _queue.value.currentlyPlaying
         val history = if (prevPlaying != null && prevPlaying.id.substringAfterLast(":") != cleanCurrentId) {
@@ -46,10 +48,10 @@ class QueueManager {
             currentlyPlaying = currentTrack,
             contextName = contextName,
             userQueue = _queue.value.userQueue, // Retain user-added queue items!
-            contextQueue = upcoming,
+            contextQueue = effectiveUpcoming,
             recentHistory = history
         )
-        Log.i(TAG, "Queue initialized: current='${currentTrack.name}', upcomingContext=${upcoming.size}, userQueue=${_queue.value.userQueue.size}")
+        Log.i(TAG, "Queue initialized: current='${currentTrack.name}', upcomingContext=${effectiveUpcoming.size}, userQueue=${_queue.value.userQueue.size}, shuffle=$isShuffleEnabled")
     }
 
     fun addToUserQueue(track: Track) {
@@ -118,9 +120,9 @@ class QueueManager {
             listOf(PlayedTrackRecord(current)) + q.recentHistory.take(19)
         } else q.recentHistory
 
-        val nextCleanId = nextTrack.id.substringAfterLast(":")
-        val newUserQueue = if (q.userQueue.firstOrNull()?.id?.substringAfterLast(":") == nextCleanId) q.userQueue.drop(1) else q.userQueue
-        val newContextQueue = if (q.contextQueue.firstOrNull()?.id?.substringAfterLast(":") == nextCleanId) q.contextQueue.drop(1) else q.contextQueue
+        val fromUserQueue = q.userQueue.isNotEmpty()
+        val newUserQueue = if (fromUserQueue) q.userQueue.drop(1) else q.userQueue
+        val newContextQueue = if (!fromUserQueue && q.contextQueue.isNotEmpty()) q.contextQueue.drop(1) else q.contextQueue
 
         _queue.value = q.copy(
             currentlyPlaying = nextTrack,
@@ -167,6 +169,7 @@ class QueueManager {
     }
 
     fun setShuffle(enabled: Boolean) {
+        isShuffleEnabled = enabled
         _queue.update { q ->
             if (enabled) {
                 if (originalContextQueue.isEmpty()) {

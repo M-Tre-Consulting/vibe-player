@@ -66,14 +66,16 @@ class SpotifyConnectPlayerImpl(
         pollJob = null
     }
 
-    suspend fun syncRemotePlaybackState() {
+    suspend fun syncRemotePlaybackState(): PlaybackState? {
         val result = apiService.getPlaybackState()
+        var syncedState: PlaybackState? = null
         result.onSuccess { state ->
             if (state != null) {
                 val current = _playbackState.value
                 val resolvedTrack = state.currentTrack ?: current.currentTrack
                 val merged = state.copy(currentTrack = resolvedTrack)
                 _playbackState.value = merged
+                syncedState = merged
                 val activeDev = state.activeDevice
                 if (activeDev != null) {
                     targetDeviceId = activeDev.id
@@ -82,13 +84,15 @@ class SpotifyConnectPlayerImpl(
         }.onFailure { err ->
             Log.w(TAG, "Failed to poll Spotify Connect playback state: ${err.message}")
         }
+        return syncedState
     }
 
     suspend fun playTrackWithResult(track: Track, contextTracks: List<Track>): Result<Unit> {
         startPolling()
         val trackUri = if (track.uri.startsWith("spotify:track:")) track.uri else "spotify:track:${track.id}"
+        val cleanTrackId = track.id.substringAfterLast(":")
         val uris = if (contextTracks.isNotEmpty()) {
-            val index = contextTracks.indexOfFirst { it.id == track.id }
+            val index = contextTracks.indexOfFirst { it.id.substringAfterLast(":") == cleanTrackId }
             if (index != -1) {
                 contextTracks.drop(index).take(50).map {
                     if (it.uri.startsWith("spotify:track:")) it.uri else "spotify:track:${it.id}"

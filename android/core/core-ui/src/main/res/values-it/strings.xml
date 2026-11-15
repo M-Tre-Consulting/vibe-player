@@ -180,6 +180,31 @@
     <string name="settings_account_section">ACCOUNT SPOTIFY</string>
     <string name="settings_connected_oauth">Connesso via OAuth PKCE</string>
     <string name="settings_logout">Esci</string>
+    <string name="settings_appearance_section">ASPETTO</string>
+    <string name="settings_theme_title">Tema</string>
+    <string name="settings_theme_system">Sistema</string>
+    <string name="settings_theme_light">Chiaro</string>
+    <string name="settings_theme_dark">Scuro</string>
+    <string name="settings_dynamic_colors_title">Colori dinamici (Monet)</string>
+    <string name="settings_dynamic_colors_desc">Adatta i colori dell\'app allo sfondo di sistema.</string>
+    <string name="settings_audio_quality_title">Qualità streaming</string>
+    <string name="settings_audio_quality_normal">Normale (160 kbps)</string>
+    <string name="settings_audio_quality_high">Alta (320 kbps)</string>
+    <string name="settings_engine_menu_title">Motore di Riproduzione &amp; Connect</string>
+    <string name="settings_engine_menu_subtitle">Scegli tra Spotify IPC, ExoPlayer o Connect</string>
+    <string name="settings_open_devices">Gestisci dispositivi Spotify Connect</string>
+    <string name="settings_updates_section">AGGIORNAMENTI</string>
+    <string name="settings_version_label">Versione %s</string>
+    <string name="settings_check_updates">Verifica aggiornamenti</string>
+    <string name="settings_checking_updates">Controllo in corso…</string>
+    <string name="settings_update_up_to_date">Vibe è aggiornato all\'ultima versione.</string>
+    <string name="settings_update_available_format">Nuova versione disponibile: %s</string>
+    <string name="settings_update_download_install">Scarica e Installa</string>
+    <string name="settings_update_downloading">Download aggiornamento…</string>
+    <string name="settings_update_open_release">Apri Release</string>
+    <string name="settings_update_play_store_managed">Gli aggiornamenti sono gestiti da Google Play Store.</string>
+    <string name="settings_update_open_play_store">Apri Play Store</string>
+    <string name="settings_update_error">Impossibile verificare gli aggiornamenti: %s</string>
 
     <!-- Banners, Alerts & Playback Messages -->
     <string name="banner_open_spotify">Apri Spotify</string>

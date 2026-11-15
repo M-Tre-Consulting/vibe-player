@@ -116,20 +116,21 @@ fun DevicesDialog(
                             Icon(
                                 imageVector = Icons.Default.Smartphone,
                                 contentDescription = null,
-                                tint = if (isInternalLocalActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                tint = if (isInternalLocalActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = stringResource(com.vibe.core.ui.R.string.devices_vibe_player_model, Build.MODEL),
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = if (isInternalLocalActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isInternalLocalActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = if (isInternalLocalActive) stringResource(com.vibe.core.ui.R.string.devices_this_phone_subtitle_playing)
                                     else stringResource(com.vibe.core.ui.R.string.devices_this_phone_subtitle_tap),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = if (isInternalLocalActive) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -278,20 +279,21 @@ fun DeviceItemRow(
                         else -> Icons.Default.Speaker
                     },
                     contentDescription = null,
-                    tint = if (isCurrentlyActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    tint = if (isCurrentlyActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = device.name,
                         style = MaterialTheme.typography.titleMedium,
-                        color = if (isCurrentlyActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isCurrentlyActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = subtitle ?: if (isCurrentlyActive) stringResource(com.vibe.core.ui.R.string.devices_remote_playing)
                                else stringResource(com.vibe.core.ui.R.string.devices_spotify_connect),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (isCurrentlyActive) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

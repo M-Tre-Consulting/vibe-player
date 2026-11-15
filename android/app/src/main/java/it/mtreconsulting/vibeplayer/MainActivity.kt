@@ -274,7 +274,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            VibeTheme(isAlbumArtTintEnabled = true) {
+            VibeTheme(
+                themeMode = vibeSettings.themeMode,
+                useSystemDynamicColors = vibeSettings.useDynamicColors,
+                isAlbumArtTintEnabled = true
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -883,20 +887,34 @@ class MainActivity : ComponentActivity() {
                                          }
                                      },
                                     onSelectDevice = { dev ->
-                                        android.util.Log.i("VIBE_CONNECT", "User selected device: '${dev.name}' (ID: ${dev.id}) -> Switching mode to CONNECT")
+                                        android.util.Log.i("VIBE_CONNECT", "User selected device: '${dev.name}' (ID: ${dev.id}, active=${dev.isActive}) -> Switching mode to CONNECT")
                                         isDevicesDialogVisible = false
                                         lifecycleScope.launch {
                                             settingsManager.setPlaybackMode(PlaybackMode.CONNECT)
-                                            routingPlayer?.switchToConnect(dev.id, transferPlayback = playbackState.isPlaying)
-                                            val result = apiService.transferPlayback(dev.id, play = playbackState.isPlaying)
-                                            if (result.isSuccess) {
+                                            val remoteState = apiService.getPlaybackState().getOrNull()
+                                            val remoteIsPlaying = remoteState?.isPlaying == true
+                                            val shouldPlay = playbackState.isPlaying || remoteIsPlaying
+
+                                            if (dev.isActive) {
+                                                // Device is already active on Spotify Connect: sync live metadata, context & queue without interrupting playback
+                                                routingPlayer?.switchToConnect(dev.id, transferPlayback = false)
                                                 Toast.makeText(
                                                     this@MainActivity,
                                                     getString(com.vibe.core.ui.R.string.connected_to_device_format, dev.name),
                                                     Toast.LENGTH_SHORT
                                                 ).show()
+                                            } else {
+                                                routingPlayer?.switchToConnect(dev.id, transferPlayback = shouldPlay && !remoteIsPlaying)
+                                                val result = apiService.transferPlayback(dev.id, play = shouldPlay)
+                                                if (result.isSuccess) {
+                                                    Toast.makeText(
+                                                        this@MainActivity,
+                                                        getString(com.vibe.core.ui.R.string.connected_to_device_format, dev.name),
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
                                             }
-                                            delay(500)
+                                            delay(400)
                                             refreshDevicesAndSyncPlayback()
                                         }
                                     },
@@ -941,12 +959,34 @@ class MainActivity : ComponentActivity() {
                             if (isSettingsDialogVisible) {
                                 SettingsDialog(
                                     settings = vibeSettings,
+                                    currentVersion = BuildConfig.VERSION_NAME,
                                     onUpdateSettings = { updated ->
+                                        val modeChanged = updated.playbackMode != vibeSettings.playbackMode
                                         lifecycleScope.launch {
                                             settingsManager.setPlaybackMode(updated.playbackMode)
                                             settingsManager.setAutoFallback(updated.autoFallbackEnabled)
                                             settingsManager.setAudioQuality(updated.audioQuality)
+                                            settingsManager.setThemeMode(updated.themeMode)
+                                            settingsManager.setUseDynamicColors(updated.useDynamicColors)
+                                            if (modeChanged) {
+                                                val routingPlayer = audioPlayer as? RoutingAudioPlayerImpl
+                                                when (updated.playbackMode) {
+                                                    PlaybackMode.CONNECT -> {
+                                                        routingPlayer?.switchToConnect(transferPlayback = false)
+                                                        refreshDevicesAndSyncPlayback(autoSwitchIfRemoteActive = false)
+                                                    }
+                                                    PlaybackMode.SPOTIFY_REMOTE -> {
+                                                        routingPlayer?.switchToSpotifyRemote(transferPlayback = playbackState.isPlaying)
+                                                    }
+                                                    PlaybackMode.STANDALONE -> {
+                                                        routingPlayer?.switchToExoPlayer(transferPlayback = playbackState.isPlaying)
+                                                    }
+                                                }
+                                            }
                                         }
+                                    },
+                                    onOpenDevices = {
+                                        isDevicesDialogVisible = true
                                     },
                                     onClearCache = {
                                         lifecycleScope.launch {
